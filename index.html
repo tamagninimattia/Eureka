@@ -429,9 +429,9 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
           <span class="filter-bar-label" style="white-space:nowrap;">Tipo:</span>
           <div id="type-chips" style="display:flex;gap:6px;align-items:center;flex-shrink:0;"></div>
           <div class="filter-sep"></div>
-          <span class="filter-bar-label" style="white-space:nowrap;">Settore:</span>
-          <div id="sector-chips" style="display:flex;gap:6px;flex-shrink:0;"></div>
-          <div class="filter-sep"></div>
+          <span class="filter-bar-label" style="white-space:nowrap;display:none;">Settore:</span>
+          <div id="sector-chips" style="display:none;gap:6px;flex-shrink:0;"></div>
+          <div class="filter-sep" style="display:none;"></div>
           <span class="filter-bar-label" style="white-space:nowrap;">Titolo:</span>
           <select id="filter-titolo" onchange="setFilter('titolo',this.value)" style="padding:4px 8px;font-family:var(--mono);font-size:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text2);cursor:pointer;min-width:130px;max-width:200px;flex-shrink:0;">
             <option value="">— tutti —</option>
@@ -522,10 +522,10 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
         <!-- 6 CARD METRICHE PRINCIPALI -->
         <div style="display:grid;grid-template-columns:5fr 3fr 3fr 4fr 3fr 3fr;gap:10px;margin-bottom:10px;">
 
-          <!-- 1. Valore netto di liquidazione — sempre verde, font più grande -->
+          <!-- 1. Net Liquidation Value — sempre verde, font più grande -->
           <div id="hero-liq" class="metric-card" style="padding:18px 22px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);">
             <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);"></div>
-            <div style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--green);font-weight:700;margin-bottom:10px;">Valore netto di liquidazione</div>
+            <div style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--green);font-weight:700;margin-bottom:10px;">Net Liquidation Value</div>
             <div id="mkt-net-liq" style="font-family:var(--serif);font-size:42px;color:var(--green);line-height:1;letter-spacing:-0.03em;">—</div>
           </div>
 
@@ -543,17 +543,17 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
             <div id="m-xirr" style="font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-0.03em;color:var(--green);transition:color 0.3s;"></div>
           </div>
 
-          <!-- 4. Risultato netto totale — dinamico -->
+          <!-- 4. Net Return — dinamico -->
           <div id="cell-risultato" class="metric-card" style="padding:18px 18px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);transition:background 0.3s,border-color 0.3s;">
             <div id="line-risultato" style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);transition:background 0.3s;"></div>
-            <div id="label-risultato" style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;margin-bottom:10px;color:var(--green);transition:color 0.3s;">Risultato netto totale</div>
+            <div id="label-risultato" style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;margin-bottom:10px;color:var(--green);transition:color 0.3s;">Net Return</div>
             <div id="m-risultato-netto" style="font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-0.03em;color:var(--green);transition:color 0.3s;">—</div>
           </div>
 
           <!-- 5. Cedole & Div. netti — sempre verde -->
           <div class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);">
             <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);"></div>
-            <div style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;color:var(--green);margin-bottom:10px;">Cedole &amp; Div. netti</div>
+            <div style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;color:var(--green);margin-bottom:10px;">Income &amp; Yield</div>
             <div id="m-cedole-tot" style="font-family:var(--serif);font-size:28px;color:var(--green);line-height:1;letter-spacing:-0.03em;">—</div>
           </div>
 
@@ -2165,7 +2165,7 @@ function updMetrics(){
   const fCed=ced.filter(c=>filterKey(c.isin||c.titolo));
   const fCos=cos;
 
-  // Valore netto di liquidazione — aggiornato da updDashKPI, non qui
+  // Net Liquidation Value — aggiornato da updDashKPI, non qui
 
   // 1. Duration
   const dur=calcDuration(fAcq,fVen);
