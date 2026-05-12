@@ -2242,7 +2242,7 @@ function parseImportFile(file){
   reader.onload=e=>{
     try{
       const data=JSON.parse(e.target.result);
-      if(!data._meta||data._meta.app!=='Eureka') throw new Error('File non riconosciuto — assicurati di usare file esportati da Eureka');
+      if(!data._meta||!['Eureka','PortfolioMonitor'].includes(data._meta.app)) throw new Error('File non riconosciuto — assicurati di usare file esportati da Eureka');
       // compatibilità: vecchi file senza type accettati come movimenti
       const fileType=data._meta.type||'movimenti';
       const expectedType=_importType==='ana'?'anagrafica':'movimenti';
@@ -2291,6 +2291,7 @@ function doImport(){
   if(_importType==='ana'){
     ana=_importPayload.anagrafica||[];
     save();rendAna();fillAnaSelect();
+    cloudPushAll('anagrafica');
     closeModal('modal-import');toast('Anagrafica importata ✓');
   } else {
     acq=_importPayload.acquisti||[];
@@ -2299,9 +2300,35 @@ function doImport(){
     cos=_importPayload.costi||[];
     save();rendAcq();rendCed();rendVen();rendCos();
     buildFilterChips();updDash();updMinus();
+    cloudPushAll('movimenti');
     closeModal('modal-import');toast('Movimenti importati ✓');
   }
   _importPayload=null;
+}
+
+/* ── CLOUD PUSH ALL (usato dopo import) ── */
+async function cloudPushAll(type){
+  if(!SB_TOKEN||!SB_UID){ toast('Non connesso: dati solo in locale',true); return; }
+  toast('Sincronizzazione cloud in corso…');
+  try{
+    const sets = type==='anagrafica'
+      ? [['anagrafica', ana]]
+      : [['acquisti',acq],['cedole',ced],['vendite',ven],['costi',cos]];
+
+    for(const [table, arr] of sets){
+      // Elimina tutti i record esistenti dell'utente
+      await sbQ(`${table}?user_id=eq.${SB_UID}`, {method:'DELETE'});
+      // Reinserisce tutti i record
+      if(arr.length){
+        const rows = arr.map(({id,...r})=>({...r, user_id:SB_UID}));
+        await sbQ(table, {method:'POST', body:JSON.stringify(rows), prefer:'return=minimal'});
+      }
+    }
+    toast('Dati sincronizzati su cloud ✓');
+  }catch(e){
+    console.warn('cloudPushAll error:', e);
+    toast('Errore sincronizzazione: '+e.message, true);
+  }
 }
 
 function closeModal(id){document.getElementById(id).classList.remove('show');}
