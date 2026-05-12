@@ -2249,7 +2249,7 @@ function updMetrics(){
 
   const fAcq=acq.filter(a=>filterKey(a.isin||a.titolo));
   const fVen=ven.filter(v=>filterKey(v.isin||v.titolo));
-  const fCed=ced.filter(c=>filterKey(c.isin||c.titolo));
+  const fCed=ced.filter(c=>filterKey(c.isin||c.titolo)&&!c.provvisoria);
   const fCos=cos;
 
   // Net Liquidation Value — aggiornato da updDashKPI, non qui
