@@ -3056,9 +3056,24 @@ async function cloudPull(){
 
 /* ── CLOUD UPSERT / DELETE ── */
 async function cUpsert(table,record){
-  if(!SB_TOKEN)return;
-  try{await sbQ(table,{method:'POST',body:JSON.stringify({...record,user_id:SB_UID}),prefer:'resolution=merge-duplicates,return=minimal'});}
-  catch(e){console.warn('upsert',table,e);}
+  if(!SB_TOKEN||!SB_UID) return;
+  try{
+    // Prova prima PATCH se il record esiste già (più affidabile per campi booleani)
+    const existing=await sbQ(`${table}?id=eq.${record.id}&user_id=eq.${SB_UID}`);
+    if(existing.length){
+      const {id,...rest}=record;
+      await sbQ(`${table}?id=eq.${id}&user_id=eq.${SB_UID}`,{
+        method:'PATCH',
+        body:JSON.stringify({...rest,user_id:SB_UID})
+      });
+    } else {
+      await sbQ(table,{
+        method:'POST',
+        body:JSON.stringify({...record,user_id:SB_UID}),
+        prefer:'return=minimal'
+      });
+    }
+  }catch(e){console.warn('cUpsert',table,e);}
 }
 async function cDelete(table,id){
   if(!SB_TOKEN)return;
@@ -3292,7 +3307,8 @@ function initApp(){
   fillDossierSelects();
   rendAna();rendAcq();rendCed();rendVen();rendCos();
   fillAnaSelect();buildFilterChips();updDash();updMinus();
-  verificaProvvisorie(); // conferma automaticamente le cedole con data stacco passata
+  // Verifica provvisorie con piccolo delay per assicurarsi che i dati siano pronti
+  setTimeout(verificaProvvisorie, 500);
   ['a-data','c-data','c-dpag','v-data','k-data'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value=today();
   });
