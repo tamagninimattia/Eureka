@@ -2546,17 +2546,31 @@ async function fetchPricesFromFinnhub(){
 
   try{
     const tickers=entries.map(p=>p.ticker);
-    const res=await fetch(`${SB_URL}/functions/v1/get-prices`,{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Authorization':`Bearer ${SB_TOKEN||SB_KEY}`
-      },
-      body:JSON.stringify({tickers})
-    });
-    if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    const results=await res.json();
-    console.log('Prezzi ricevuti:', results);
+    const edgeUrl=`${SB_URL}/functions/v1/get-prices`;
+    console.log('Chiamata Edge Function:', edgeUrl, 'Tickers:', tickers);
+
+    let res;
+    try{
+      res=await fetch(edgeUrl,{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'apikey': SB_KEY,
+          'Authorization':`Bearer ${SB_KEY}`
+        },
+        body:JSON.stringify({tickers})
+      });
+    }catch(netErr){
+      console.error('Errore di rete:', netErr);
+      throw new Error('Impossibile raggiungere il server. Verifica la connessione o la Edge Function su Supabase.');
+    }
+
+    console.log('Risposta HTTP:', res.status, res.statusText);
+    const text=await res.text();
+    console.log('Corpo risposta:', text);
+
+    if(!res.ok) throw new Error(`Errore server: ${res.status} — ${text}`);
+    const results=JSON.parse(text);
 
     let ok=0,errTickers=[];
     for(const p of entries){
@@ -2576,6 +2590,7 @@ async function fetchPricesFromFinnhub(){
     }
 
     Object.values(getPort()).filter(p=>p.qty>0).forEach(p=>recalcPortRow(p.isin||p.titolo));
+    updDash(); // re-render completo per aggiornare anche la riga totale e le metriche
     updDashKPI();
 
     if(ok>0) toast(`Aggiornati: ${ok} ✓${errTickers.length?' · Non trovati: '+errTickers.join(', '):''}`);
