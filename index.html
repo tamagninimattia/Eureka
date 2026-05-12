@@ -1773,21 +1773,22 @@ function addCed(){
 // Controlla e conferma le cedole provvisorie con data stacco passata
 function verificaProvvisorie(){
   const oggi=today();
+  const port=getPort();
+  // Non eseguire se non ci sono acquisti caricati (portafoglio non ancora pronto)
+  if(!acq.length) return;
   let aggiornate=0;
   ced.forEach(c=>{
     if(!c.provvisoria) return;
-    if(c.data<=oggi){
-      // Stacco passato: aggiorna qty con quella attuale in portafoglio al momento dello stacco
-      const port=getPort();
-      const qtyReale=port[c.isin]?.qty||c.qty_prevista||c.qty;
-      c.qty=qtyReale;
-      c.lordo=c.unit*qtyReale;
-      c.tax=c.lordo*0.26;
-      c.netto=c.lordo-c.comm-c.tax;
-      c.provvisoria=false;
-      aggiornate++;
-      if(SB_TOKEN) cUpsert('cedole',c);
-    }
+    if(c.data>oggi) return; // stacco futuro: lascia provvisoria
+    const qtyReale=port[c.isin]?.qty||0;
+    if(!qtyReale) return; // qty non disponibile: lascia provvisoria
+    c.qty=qtyReale;
+    c.lordo=+(c.unit*qtyReale).toFixed(4);
+    c.tax=+(c.lordo*0.26).toFixed(4);
+    c.netto=+(c.lordo-c.comm-c.tax).toFixed(4);
+    c.provvisoria=false;
+    aggiornate++;
+    if(SB_TOKEN) cUpsert('cedole',c);
   });
   if(aggiornate>0){
     save();rendCed();
@@ -3025,7 +3026,7 @@ function sbLogout(){
 
 /* ── CLOUD PULL ── */
 async function cloudPull(){
-  const tables={acquisti:d=>{acq=d;},cedole:d=>{ced=d;},vendite:d=>{ven=d;},costi:d=>{cos=d;},anagrafica:d=>{ana=d;}};
+  const tables={acquisti:d=>{acq=d;},cedole:d=>{ced=d.map(c=>({...c,provvisoria:c.provvisoria===true}));},vendite:d=>{ven=d;},costi:d=>{cos=d;},anagrafica:d=>{ana=d;}};
   for(const[table,setter]of Object.entries(tables)){
     const rows=await sbQ(`${table}?user_id=eq.${SB_UID}&order=id.asc`);
     setter(rows.map(({user_id,...r})=>r));
