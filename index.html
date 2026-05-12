@@ -520,7 +520,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
         <input type="hidden" id="mkt-comm-lat" value="">
 
         <!-- 6 CARD METRICHE PRINCIPALI -->
-        <div style="display:grid;grid-template-columns:5fr 4fr 3fr 3fr 3fr 3fr;gap:10px;margin-bottom:10px;">
+        <div style="display:grid;grid-template-columns:5fr 3fr 3fr 4fr 3fr 3fr;gap:10px;margin-bottom:10px;">
 
           <!-- 1. Valore netto di liquidazione -->
           <div id="hero-liq" class="metric-card" style="padding:18px 20px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);">
@@ -529,23 +529,22 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
             <div id="mkt-net-liq" style="font-family:var(--serif);font-size:42px;color:var(--green);line-height:1;letter-spacing:-0.03em;">—</div>
           </div>
 
-          <!-- 2. Risultato netto totale -->
-          <div id="cell-risultato" class="metric-card" style="padding:18px 18px;position:relative;overflow:hidden;transition:background 0.3s,border-color 0.3s;">
-            <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--text3),transparent);"></div>
-            <div id="label-risultato" style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;margin-bottom:10px;transition:color 0.3s;color:var(--text2);">Risultato netto totale</div>
-            <div id="m-risultato-netto" style="font-family:var(--serif);font-size:32px;line-height:1;letter-spacing:-0.025em;transition:color 0.3s;color:var(--text);">—</div>
-          </div>
-
-          <!-- 3. TIR reale -->
+          <!-- 2. TIR reale -->
           <div id="cell-tir-reale" class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;transition:background 0.3s,border-color 0.3s;">
             <div id="label-tir-reale" style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;margin-bottom:10px;transition:color 0.3s;color:var(--text2);">TIR reale</div>
             <div id="m-xirr-real" style="font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-0.015em;transition:color 0.3s;color:var(--text);"></div>
           </div>
 
-          <!-- 4. TIR nominale -->
+          <!-- 3. TIR nominale -->
           <div id="cell-tir-nom" class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;transition:background 0.3s,border-color 0.3s;">
             <div id="label-tir-nom" style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:10px;transition:color 0.3s;color:var(--text2);">TIR nominale</div>
             <div id="m-xirr" style="font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-0.015em;transition:color 0.3s;color:var(--text);"></div>
+          </div>
+
+          <!-- 4. Risultato netto totale -->
+          <div id="cell-risultato" class="metric-card" style="padding:18px 18px;position:relative;overflow:hidden;transition:background 0.3s,border-color 0.3s;">
+            <div id="label-risultato" style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;margin-bottom:10px;transition:color 0.3s;color:var(--text2);">Risultato netto totale</div>
+            <div id="m-risultato-netto" style="font-family:var(--serif);font-size:32px;line-height:1;letter-spacing:-0.025em;transition:color 0.3s;color:var(--text);">—</div>
           </div>
 
           <!-- 5. Cedole & Div. netti -->
@@ -556,9 +555,10 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
           </div>
 
           <!-- 6. P&L vendite netto -->
-          <div class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;">
-            <div id="label-pl-vendite" style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:0.11em;color:var(--text2);margin-bottom:10px;">P&amp;L vendite netto</div>
-            <div id="m-pl-vendite" style="font-family:var(--serif);font-size:28px;color:var(--text);line-height:1;letter-spacing:-0.01em;">—</div>
+          <div id="cell-pl-vendite" class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;transition:background 0.3s,border-color 0.3s;">
+            <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--text3),transparent);opacity:0.5;" id="line-pl-vendite"></div>
+            <div id="label-pl-vendite" style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:0.11em;color:var(--text2);margin-bottom:10px;transition:color 0.3s;">P&amp;L vendite netto</div>
+            <div id="m-pl-vendite" style="font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-0.01em;transition:color 0.3s;color:var(--text);">—</div>
           </div>
 
         </div>
@@ -2298,10 +2298,8 @@ function updDashKPI(){
   const filteredVenAll=ven.filter(v=>filterKey(v.isin||v.titolo));
   const plVenNetto=filteredVenAll.reduce((s,v)=>s+v.net,0);
   const plVenEl=document.getElementById('m-pl-vendite');
-  if(plVenEl){
-    plVenEl.textContent=E(plVenNetto);
-    plVenEl.style.color=plVenNetto>=0?'var(--green)':'var(--red)';
-  }
+  if(plVenEl) plVenEl.textContent=E(plVenNetto);
+  setHeroCell('cell-pl-vendite','label-pl-vendite','m-pl-vendite',plVenNetto,true);
 
   // Cedole totali → metric cell
   const filteredCedAll=ced.filter(c=>filterKey(c.isin||c.titolo));
