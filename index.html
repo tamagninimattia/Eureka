@@ -353,6 +353,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
   </div>
   <nav class="sb-nav">
     <button class="ni active" onclick="sw('dashboard',this)"><div class="ni-ico">◈</div><span>Dashboard</span></button>
+    <button class="ni" onclick="sw('dossier',this)"><div class="ni-ico">⬡</div><span>Dossier</span></button>
     <button class="ni" onclick="sw('anagrafica',this)"><div class="ni-ico">☰</div><span>Anagrafica</span></button>
     <button class="ni" onclick="sw('acquisti',this)"><div class="ni-ico">↓</div><span>Acquisti</span></button>
     <button class="ni" onclick="sw('cedole',this)"><div class="ni-ico">◎</div><span>Cedole</span></button>
@@ -422,6 +423,9 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
       <div style="background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-bottom:14px;">
         <!-- Riga 1: filtri tipo, settore e titolo -->
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto;margin-bottom:10px;padding-bottom:2px;">
+          <span class="filter-bar-label" style="white-space:nowrap;">Dossier:</span>
+          <div id="dossier-chips" style="display:flex;gap:6px;align-items:center;flex-shrink:0;"></div>
+          <div class="filter-sep"></div>
           <span class="filter-bar-label" style="white-space:nowrap;">Tipo:</span>
           <div id="type-chips" style="display:flex;gap:6px;align-items:center;flex-shrink:0;"></div>
           <div class="filter-sep"></div>
@@ -622,6 +626,37 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
     </div>
   </div>
 
+  <!-- ═══════════ DOSSIER ═══════════ -->
+  <div id="tab-dossier" class="tab-content">
+    <div class="ph">
+      <div class="ph-title">I miei <em>Dossier</em></div>
+      <div class="ph-sub">// gestisci i tuoi dossier titoli · uno per ogni conto o banca</div>
+    </div>
+    <div class="content">
+      <!-- FORM NUOVO DOSSIER -->
+      <div class="card">
+        <div class="ch"><div class="ch-left"><div class="ch-ico">⬡</div><div class="ch-title">Nuovo dossier</div></div></div>
+        <div class="fg">
+          <div class="fgroup"><label class="fl">Nome dossier</label><input type="text" id="dos-nome" placeholder="es. Fineco · Directa · Trading212"></div>
+          <div class="fgroup">
+            <label class="fl">Colore</label>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <input type="color" id="dos-colore" value="#d4a853" style="width:42px;height:34px;border:1px solid var(--border);border-radius:6px;background:transparent;cursor:pointer;padding:2px;">
+              <div id="dos-colore-preview" style="font-family:var(--mono);font-size:12px;color:var(--text2);">#d4a853</div>
+            </div>
+          </div>
+        </div>
+        <div class="fa"><button class="btn" onclick="addDossier()">+ Crea dossier</button></div>
+      </div>
+
+      <!-- LISTA DOSSIER -->
+      <div class="card">
+        <div class="ch"><div class="ch-left"><div class="ch-ico">⬡</div><div class="ch-title">I tuoi dossier</div></div></div>
+        <div id="dossier-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══════════ ANAGRAFICA ═══════════ -->
   <div id="tab-anagrafica" class="tab-content">
     <div class="ph">
@@ -716,6 +751,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
 
         <div class="fg">
           <div class="fgroup"><label class="fl">Data acquisto</label><input type="date" id="a-data"></div>
+          <div class="fgroup"><label class="fl">Dossier <span class="fl-b">OBBLIGATORIO</span></label><select id="a-dossier"><option value="">— seleziona dossier —</option></select></div>
           <div class="fgroup"><label class="fl">Titolo</label><input type="text" id="a-titolo" placeholder="Nome del titolo"></div>
           <div class="fgroup"><label class="fl">ISIN</label><input type="text" id="a-isin" placeholder="es. IT0003132476"></div>
           <div class="fgroup"><label class="fl">Ticker</label><input type="text" id="a-ticker" placeholder="es. ENI.MI"></div>
@@ -788,6 +824,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
         <div class="ch"><div class="ch-left"><div class="ch-ico">◎</div><div class="ch-title">Nuovo stacco</div></div></div>
         <div class="fg">
           <div class="fgroup"><label class="fl">Data stacco</label><input type="date" id="c-data" oninput="updCedQty()"></div>
+          <div class="fgroup"><label class="fl">Dossier</label><select id="c-dossier"><option value="">— seleziona dossier —</option></select></div>
           <div class="fgroup"><label class="fl">Data pagamento</label><input type="date" id="c-dpag"></div>
           <div class="fgroup"><label class="fl">Titolo</label><select id="c-tit" onchange="updCedQty()"><option value="">— seleziona —</option></select></div>
           <div class="fgroup"><label class="fl">Importo unitario lordo (€)</label><input type="number" id="c-unit" step="0.0001" placeholder="0,0000" oninput="calcCed()"></div>
@@ -824,6 +861,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
         <div class="ch"><div class="ch-left"><div class="ch-ico">↑</div><div class="ch-title">Nuova vendita</div></div></div>
         <div class="fg dense">
           <div class="fgroup"><label class="fl">Data vendita</label><input type="date" id="v-data"></div>
+          <div class="fgroup"><label class="fl">Dossier</label><select id="v-dossier"><option value="">— seleziona dossier —</option></select></div>
           <div class="fgroup"><label class="fl">Titolo</label><select id="v-tit" onchange="updPMC()"><option value="">— seleziona —</option></select></div>
           <div class="fgroup"><label class="fl">Quantità venduta</label><input type="number" id="v-qty" step="1" placeholder="0" oninput="calcVen()"></div>
           <div class="fgroup"><label class="fl">Prezzo vendita unit. (€)</label><input type="number" id="v-prez" step="0.0001" placeholder="0,0000" oninput="calcVen()"></div>
@@ -876,6 +914,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
         <div class="ch"><div class="ch-left"><div class="ch-ico">−</div><div class="ch-title">Nuovo costo</div></div></div>
         <div class="fg">
           <div class="fgroup"><label class="fl">Data</label><input type="date" id="k-data"></div>
+          <div class="fgroup"><label class="fl">Dossier</label><select id="k-dossier"><option value="">— seleziona dossier —</option></select></div>
           <div class="fgroup"><label class="fl">Tipo</label>
             <select id="k-tipo">
               <option value="commissione">Commissione (tenuta conto…)</option>
@@ -972,20 +1011,21 @@ function sw(name,btn){
   if(name==='acquisti') fillAnaSelect();
   if(name==='anagrafica') rendAna();
   if(name==='dashboard'){buildFilterChips();updDash();}
-  if(name==='vendite'){updMinus();calcVen();}
+  if(name==='dossier'){rendDossier();fillDossierSelects();}
 }
 
 /* ── FILTERS ── */
-let fType='all', fSector='all', fTitolo='';
+let fType='all', fSector='all', fTitolo='', fDossier='all';
 function setFilter(dim,val){
   if(dim==='type') fType=val;
   if(dim==='sector') fSector=val;
   if(dim==='titolo') fTitolo=val;
+  if(dim==='dossier') fDossier=val;
   buildFilterChips();
   updDash();
 }
 function resetFilters(){
-  fType='all';fSector='all';fTitolo='';
+  fType='all';fSector='all';fTitolo='';fDossier='all';
   const sel=document.getElementById('filter-titolo');
   if(sel) sel.value='';
   ['tog-comm','tog-tax','tog-cos','tog-tax-lat','tog-comm-lat'].forEach(id=>{
@@ -997,6 +1037,19 @@ function resetFilters(){
 
 function buildFilterChips(){
   const port=getPort();
+
+  // Chip dossier colorati
+  const dosDiv=document.getElementById('dossier-chips');
+  if(dosDiv){
+    dosDiv.innerHTML=
+      `<button class="filter-chip${fDossier==='all'?' on':''}" onclick="setFilter('dossier','all')"><span class="chip-dot"></span>Tutti</button>`+
+      dos.map(d=>{
+        const on=String(fDossier)===String(d.id);
+        return `<button class="filter-chip${on?' on':''}" onclick="setFilter('dossier','${d.id}')" style="${on?`background:${d.colore}22;border-color:${d.colore};color:${d.colore};`:''}">
+          <span class="chip-dot" style="background:${d.colore};"></span>${d.nome}
+        </button>`;
+      }).join('');
+  }
   // Tipi presenti in acquisti con qty > 0 nel portafoglio attuale
   const tipiPresenti=new Set(
     Object.values(port)
@@ -1045,10 +1098,104 @@ function filterKey(isin){
   if(fType!=='all'&&a.tipo!==fType) return false;
   if(fSector!=='all'&&a.settore!==fSector) return false;
   if(fTitolo!==''&&(a.isin||a.titolo)!==fTitolo) return false;
+  if(fDossier!=='all'&&String(a.dossier_id)!==String(fDossier)) return false;
   return true;
 }
 
-/* ── PORTFOLIO ── */
+/* ══ DOSSIER ══ */
+let dos=DB.get('dossier',[]); // array di {id, nome, colore}
+
+// Salva dossier in localStorage
+function saveDos(){ DB.set('dossier',dos); }
+
+// Popola tutti i select dossier nei form
+function fillDossierSelects(){
+  const ids=['a-dossier','c-dossier','v-dossier','k-dossier'];
+  const defaultId=dos.length?dos[0].id:'';
+  ids.forEach(id=>{
+    const sel=document.getElementById(id);
+    if(!sel)return;
+    const cur=sel.value||defaultId;
+    sel.innerHTML=dos.map(d=>`<option value="${d.id}"${d.id==cur?' selected':''}>${d.nome}</option>`).join('');
+    if(!sel.value&&defaultId) sel.value=defaultId;
+  });
+}
+
+// Render lista dossier nella tab
+function rendDossier(){
+  const list=document.getElementById('dossier-list');
+  if(!list)return;
+  if(!dos.length){
+    list.innerHTML='<div style="font-family:var(--mono);font-size:12px;color:var(--text3);padding:12px 0;">Nessun dossier. Creane uno sopra.</div>';
+    return;
+  }
+  list.innerHTML=dos.map(d=>`
+    <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;border-left:4px solid ${d.colore};">
+      <div style="width:14px;height:14px;border-radius:50%;background:${d.colore};flex-shrink:0;"></div>
+      <div style="flex:1;">
+        <div style="font-family:var(--sans);font-size:14px;color:var(--text);font-weight:600;">${d.nome}</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:2px;">${d.colore} · ${countDossierMovimenti(d.id)} movimenti</div>
+      </div>
+      <button class="btn-ghost" style="font-size:11px;" onclick="editDossier(${d.id})">✎ Modifica</button>
+      ${dos.length>1?`<button class="btn-del" onclick="delDossier(${d.id})">✕</button>`:''}
+    </div>`).join('');
+}
+
+function countDossierMovimenti(id){
+  return [acq,ced,ven,cos].flat().filter(r=>r.dossier_id==id).length;
+}
+
+function addDossier(){
+  const nome=document.getElementById('dos-nome').value.trim();
+  const colore=document.getElementById('dos-colore').value||'#d4a853';
+  if(!nome){toast('Inserisci un nome per il dossier',true);return;}
+  const nd={id:Date.now(),nome,colore};
+  dos.push(nd);
+  saveDos();
+  rendDossier();
+  fillDossierSelects();
+  buildFilterChips();
+  document.getElementById('dos-nome').value='';
+  // Sync cloud
+  cUpsert('dossier',nd);
+  toast('Dossier creato ✓');
+}
+
+function delDossier(id){
+  if(dos.length<=1){toast('Non puoi eliminare l\'unico dossier',true);return;}
+  const hasMovimenti=countDossierMovimenti(id)>0;
+  if(hasMovimenti){toast('Questo dossier ha movimenti assegnati. Riassegnali prima di eliminarlo.',true);return;}
+  dos=dos.filter(d=>d.id!==id);
+  saveDos();
+  rendDossier();
+  fillDossierSelects();
+  buildFilterChips();
+  cDelete('dossier',id);
+  toast('Dossier eliminato ✓');
+}
+
+function editDossier(id){
+  const d=dos.find(x=>x.id===id);if(!d)return;
+  const nuovoNome=prompt('Nuovo nome dossier:',d.nome);
+  if(!nuovoNome||!nuovoNome.trim())return;
+  d.nome=nuovoNome.trim();
+  saveDos();
+  rendDossier();
+  fillDossierSelects();
+  buildFilterChips();
+  cUpsert('dossier',d);
+  toast('Dossier aggiornato ✓');
+}
+
+// Aggiorna preview colore
+document.addEventListener('DOMContentLoaded',()=>{
+  const col=document.getElementById('dos-colore');
+  const prev=document.getElementById('dos-colore-preview');
+  if(col&&prev) col.addEventListener('input',()=>{ prev.textContent=col.value; });
+});
+
+/* ── DOSSIER IN filterKey ── */
+
 function getPort(){
   const t={};
   acq.forEach(a=>{
@@ -1229,8 +1376,9 @@ function addAcq(){
   const qty=parseFloat(document.getElementById('a-qty').value);
   const tobin=parseFloat(document.getElementById('a-tobin').value)||0;
   const comm=parseFloat(document.getElementById('a-comm').value)||0;
+  const dossier_id=parseInt(document.getElementById('a-dossier')?.value)||dos[0]?.id||null;
   if(!titolo||isNaN(prezzo)||isNaN(qty)||qty<=0){toast('Compila i campi obbligatori (titolo, prezzo, qtà)',true);return;}
-  acq.push({id:Date.now(),data,titolo,isin,ticker,tipo,settore,prezzo,qty,tobin,comm});
+  acq.push({id:Date.now(),data,titolo,isin,ticker,tipo,settore,prezzo,qty,tobin,comm,dossier_id});
   save();rendAcq();toast('Acquisto registrato ✓');
   ['a-titolo','a-isin','a-ticker','a-prezzo','a-qty','a-tobin','a-comm'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('a-tipo').value='';document.getElementById('a-settore').value='';
@@ -1301,11 +1449,12 @@ function addCed(){
   const qty=parseFloat(document.getElementById('c-qty').value);
   const comm=parseFloat(document.getElementById('c-comm').value)||0;
   const tax=parseFloat(document.getElementById('c-tax').value)||0;
+  const dossier_id=parseInt(document.getElementById('c-dossier')?.value)||dos[0]?.id||null;
   if(!isin||isNaN(unit)||isNaN(qty)||qty<=0){toast('Compila tutti i campi (qtà > 0)',true);return;}
   const lordo=unit*qty,netto=lordo-comm-tax;
   const tit=acq.find(a=>(a.isin||a.titolo)===isin);
   const titolo=tit?.titolo||isin;const tipo=tit?.tipo||'';
-  ced.push({id:Date.now(),data,dpag,isin,titolo,tipo,unit,qty,lordo,comm,tax,netto});
+  ced.push({id:Date.now(),data,dpag,isin,titolo,tipo,unit,qty,lordo,comm,tax,netto,dossier_id});
   save();rendCed();toast('Cedola registrata ✓');
   ['c-unit','c-qty','c-comm','c-tax','c-lordo','c-netto'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('c-tit').value='';document.getElementById('c-dpag').value='';
@@ -1366,6 +1515,7 @@ function addVen(){
   const prez=parseFloat(document.getElementById('v-prez').value);
   const comm=parseFloat(document.getElementById('v-comm').value)||0;
   const pmc=parseFloat(document.getElementById('v-pmc').value);
+  const dossier_id=parseInt(document.getElementById('v-dossier')?.value)||dos[0]?.id||null;
   if(!isin||isNaN(qty)||isNaN(prez)||isNaN(pmc)){toast('Compila tutti i campi',true);return;}
   const port=getPort();
   if(!port[isin]||port[isin].qty<qty){toast('Quantità insufficiente in portafoglio',true);return;}
@@ -1375,7 +1525,7 @@ function addVen(){
   const minus=getMinus();let bi=pl,mc=0;
   if(pl>0&&minus>0){mc=Math.min(minus,pl);bi=pl-mc;}
   const tax=bi>0?bi*0.26:0,net=ric-tax;
-  ven.push({id:Date.now(),data,isin,titolo,tipo,qty,prez,comm,pmc,pl,mc,tax,net});
+  ven.push({id:Date.now(),data,isin,titolo,tipo,qty,prez,comm,pmc,pl,mc,tax,net,dossier_id});
   save();rendVen();updMinus();toast('Vendita registrata ✓');
   ['v-qty','v-prez','v-comm','v-pmc'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('v-tit').value='';
@@ -1608,8 +1758,9 @@ function addCos(){
   const tipo=document.getElementById('k-tipo').value;
   const descrizione=document.getElementById('k-desc').value.trim();
   const imp=parseFloat(document.getElementById('k-imp').value);
+  const dossier_id=parseInt(document.getElementById('k-dossier')?.value)||dos[0]?.id||null;
   if(!descrizione||isNaN(imp)){toast('Compila tutti i campi',true);return;}
-  cos.push({id:Date.now(),data,tipo,descrizione,imp});
+  cos.push({id:Date.now(),data,tipo,descrizione,imp,dossier_id});
   save();rendCos();toast('Costo registrato ✓');
   ['k-desc','k-imp'].forEach(id=>document.getElementById(id).value='');
 }
@@ -2486,12 +2637,23 @@ async function cloudPull(){
     const rows=await sbQ(`${table}?user_id=eq.${SB_UID}&order=id.asc`);
     setter(rows.map(({user_id,...r})=>r));
   }
+  // Carica dossier
+  const dosRows=await sbQ(`dossier?user_id=eq.${SB_UID}&order=id.asc`);
+  dos=dosRows.map(({user_id,...r})=>r);
+  // Se nessun dossier, crea il principale
+  if(!dos.length){
+    const nd={nome:'Dossier principale',colore:'#d4a853',user_id:SB_UID};
+    const res=await sbQ('dossier',{method:'POST',body:JSON.stringify(nd),prefer:'return=representation'});
+    dos=[{...(Array.isArray(res)?res[0]:res),user_id:undefined}].map(({user_id,...r})=>r);
+    DB.set('dossier',dos);
+  }
   // prezzi
   const prices=await sbQ(`port_prices?user_id=eq.${SB_UID}`);
   portPrices={};
   prices.forEach(p=>{portPrices[p.isin_key]={prez:p.prez,updatedAt:p.updated_at};});
   if(Array.isArray(portPrices)) portPrices={};
   save();
+  DB.set('dossier',dos);
 }
 
 /* ── CLOUD UPSERT / DELETE ── */
@@ -2728,6 +2890,8 @@ async function doSignup(){
 }
 
 function initApp(){
+  rendDossier();
+  fillDossierSelects();
   rendAna();rendAcq();rendCed();rendVen();rendCos();
   fillAnaSelect();buildFilterChips();updDash();updMinus();
   ['a-data','c-data','c-dpag','v-data','k-data'].forEach(id=>{
