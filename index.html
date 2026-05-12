@@ -519,48 +519,49 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
         <input type="hidden" id="mkt-tax-lat" value="">
         <input type="hidden" id="mkt-comm-lat" value="">
 
-        <!-- BANNER UNICO: 4 colonne — VNL | Risultato netto | TIR reale+nominale | Cedole+PL -->
-        <div id="hero-liq" style="display:grid;grid-template-columns:5fr 4fr 3fr 3fr;grid-template-rows:1fr 1fr;position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(52,201,126,0.08),rgba(52,201,126,0.03));border:1px solid rgba(52,201,126,0.22);border-radius:12px;">
-          <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);"></div>
-          <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(52,201,126,0.07),transparent 70%);pointer-events:none;"></div>
+        <!-- 6 CARD METRICHE PRINCIPALI -->
+        <div style="display:grid;grid-template-columns:5fr 4fr 3fr 3fr 3fr 3fr;gap:10px;margin-bottom:10px;">
 
-          <!-- COL 1: Valore netto liquidazione — occupa entrambe le righe -->
-          <div style="grid-row:1/3;padding:22px 26px;border-right:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
-            <div style="font-family:var(--sans);font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--green);font-weight:700;margin-bottom:10px;">Valore netto di liquidazione</div>
-            <div id="mkt-net-liq" style="font-family:var(--serif);font-size:64px;color:var(--green);line-height:1;letter-spacing:-0.03em;">—</div>
+          <!-- 1. Valore netto di liquidazione -->
+          <div id="hero-liq" class="metric-card" style="padding:18px 20px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);">
+            <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);"></div>
+            <div style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--green);font-weight:700;margin-bottom:10px;">Valore netto di liquidazione</div>
+            <div id="mkt-net-liq" style="font-family:var(--serif);font-size:42px;color:var(--green);line-height:1;letter-spacing:-0.03em;">—</div>
           </div>
 
-          <!-- COL 2: Risultato netto totale — occupa entrambe le righe -->
-          <div id="cell-risultato" style="grid-row:1/3;padding:22px 22px;border-right:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;transition:background 0.3s,border-color 0.3s;">
-            <div id="label-risultato" style="font-family:var(--sans);font-size:11px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;margin-bottom:10px;transition:color 0.3s;">Risultato netto totale</div>
-            <div id="m-risultato-netto" style="font-family:var(--serif);font-size:38px;line-height:1;letter-spacing:-0.03em;transition:color 0.3s;">—</div>
+          <!-- 2. Risultato netto totale -->
+          <div id="cell-risultato" class="metric-card" style="padding:18px 18px;position:relative;overflow:hidden;transition:background 0.3s,border-color 0.3s;">
+            <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--text3),transparent);"></div>
+            <div id="label-risultato" style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;margin-bottom:10px;transition:color 0.3s;color:var(--text2);">Risultato netto totale</div>
+            <div id="m-risultato-netto" style="font-family:var(--serif);font-size:32px;line-height:1;letter-spacing:-0.025em;transition:color 0.3s;color:var(--text);">—</div>
           </div>
 
-          <!-- COL 3 RIGA 1: TIR reale -->
-          <div id="cell-tir-reale" style="grid-column:3;grid-row:1;padding:16px 18px;border-right:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.07);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;transition:background 0.3s;">
-            <div id="label-tir-reale" style="font-family:var(--sans);font-size:11px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;margin-bottom:6px;transition:color 0.3s;">TIR reale</div>
-            <div id="m-xirr-real" style="font-family:var(--serif);font-size:34px;line-height:1;letter-spacing:-0.015em;transition:color 0.3s;"></div>
+          <!-- 3. TIR reale -->
+          <div id="cell-tir-reale" class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;transition:background 0.3s,border-color 0.3s;">
+            <div id="label-tir-reale" style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;margin-bottom:10px;transition:color 0.3s;color:var(--text2);">TIR reale</div>
+            <div id="m-xirr-real" style="font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-0.015em;transition:color 0.3s;color:var(--text);"></div>
           </div>
 
-          <!-- COL 3 RIGA 2: TIR nominale -->
-          <div id="cell-tir-nom" style="grid-column:3;grid-row:2;padding:16px 18px;border-right:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;transition:background 0.3s;">
-            <div id="label-tir-nom" style="font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:6px;transition:color 0.3s;">TIR nominale</div>
-            <div id="m-xirr" style="font-family:var(--serif);font-size:26px;line-height:1;letter-spacing:-0.015em;transition:color 0.3s;"></div>
+          <!-- 4. TIR nominale -->
+          <div id="cell-tir-nom" class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;transition:background 0.3s,border-color 0.3s;">
+            <div id="label-tir-nom" style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:10px;transition:color 0.3s;color:var(--text2);">TIR nominale</div>
+            <div id="m-xirr" style="font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-0.015em;transition:color 0.3s;color:var(--text);"></div>
           </div>
 
-          <!-- COL 4 RIGA 1: Cedole & Div. netti -->
-          <div style="grid-column:4;grid-row:1;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
-            <div style="font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:0.11em;color:var(--text2);margin-bottom:6px;">Cedole &amp; Div. netti</div>
-            <div id="m-cedole-tot" style="font-family:var(--serif);font-size:26px;color:var(--green);line-height:1;letter-spacing:-0.01em;">—</div>
+          <!-- 5. Cedole & Div. netti -->
+          <div class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;">
+            <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--green),transparent);opacity:0.5;"></div>
+            <div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:0.11em;color:var(--green);margin-bottom:10px;">Cedole &amp; Div. netti</div>
+            <div id="m-cedole-tot" style="font-family:var(--serif);font-size:28px;color:var(--green);line-height:1;letter-spacing:-0.01em;">—</div>
           </div>
 
-          <!-- COL 4 RIGA 2: P&L vendite netto -->
-          <div style="grid-column:4;grid-row:2;padding:16px 18px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
-            <div style="font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:0.11em;color:var(--text2);margin-bottom:6px;">P&amp;L vendite netto</div>
-            <div id="m-pl-vendite" style="font-family:var(--serif);font-size:26px;color:var(--text);line-height:1;letter-spacing:-0.01em;">—</div>
+          <!-- 6. P&L vendite netto -->
+          <div class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;">
+            <div id="label-pl-vendite" style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:0.11em;color:var(--text2);margin-bottom:10px;">P&amp;L vendite netto</div>
+            <div id="m-pl-vendite" style="font-family:var(--serif);font-size:28px;color:var(--text);line-height:1;letter-spacing:-0.01em;">—</div>
           </div>
+
         </div>
-
         <!-- Riga 5 card: Duration | Capitale | Costi | Commissioni realizzate | Tasse realizzate -->
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:10px;">
 
@@ -1345,15 +1346,18 @@ function setHeroCell(cellId, labelId, valId, value, hasVal){
   if(!hasVal){
     lbl.style.color='var(--text2)';
     val.style.color='var(--text3)';
-    cell.style.background='transparent';
+    cell.style.background='';
+    cell.style.borderColor='';
     return;
   }
   const isPos=value>=0;
   const c=isPos?'var(--green)':'var(--red)';
-  const bg=isPos?'rgba(52,201,126,0.05)':'rgba(224,84,112,0.05)';
+  const bg=isPos?'rgba(52,201,126,0.06)':'rgba(224,84,112,0.06)';
+  const border=isPos?'rgba(52,201,126,0.2)':'rgba(224,84,112,0.2)';
   lbl.style.color=c;
   val.style.color=c;
   cell.style.background=bg;
+  cell.style.borderColor=border;
 }
 
 
@@ -2310,12 +2314,10 @@ function updDashKPI(){
     nlEl.textContent = anyPrice ? E(totLiq) : '—';
     const isPos = totLiq >= 0;
     nlEl.style.color = anyPrice ? (isPos?'var(--green)':'var(--red)') : 'var(--text3)';
-    const hero = document.getElementById('hero-liq');
-    if(hero && anyPrice){
-      hero.style.background = isPos
-        ? 'linear-gradient(135deg,rgba(52,201,126,0.08),rgba(52,201,126,0.03))'
-        : 'linear-gradient(135deg,rgba(224,84,112,0.08),rgba(224,84,112,0.03))';
-      hero.style.borderColor = isPos?'rgba(52,201,126,0.22)':'rgba(224,84,112,0.22)';
+    const heroCard = document.getElementById('hero-liq');
+    if(heroCard && anyPrice){
+      heroCard.style.background = isPos?'rgba(52,201,126,0.06)':'rgba(224,84,112,0.06)';
+      heroCard.style.borderColor = isPos?'rgba(52,201,126,0.2)':'rgba(224,84,112,0.2)';
     }
   }
 
