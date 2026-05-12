@@ -420,13 +420,18 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
 
       <!-- FILTER BAR — due righe -->
       <div style="background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-bottom:14px;">
-        <!-- Riga 1: filtri tipo e settore -->
+        <!-- Riga 1: filtri tipo, settore e titolo -->
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
           <span class="filter-bar-label">Tipo:</span>
           <div id="type-chips" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;"></div>
           <div class="filter-sep"></div>
           <span class="filter-bar-label">Settore:</span>
           <div id="sector-chips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+          <div class="filter-sep"></div>
+          <span class="filter-bar-label">Titolo:</span>
+          <select id="filter-titolo" onchange="setFilter('titolo',this.value)" style="padding:5px 10px;font-family:var(--mono);font-size:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text2);cursor:pointer;min-width:140px;">
+            <option value="">— tutti —</option>
+          </select>
           <button class="filter-reset" onclick="resetFilters()" style="margin-left:auto;">✕ Reset</button>
           <span class="filter-count" id="filter-count"></span>
         </div>
@@ -971,16 +976,18 @@ function sw(name,btn){
 }
 
 /* ── FILTERS ── */
-let fType='all', fSector='all';
+let fType='all', fSector='all', fTitolo='';
 function setFilter(dim,val){
   if(dim==='type') fType=val;
   if(dim==='sector') fSector=val;
+  if(dim==='titolo') fTitolo=val;
   buildFilterChips();
   updDash();
 }
 function resetFilters(){
-  fType='all';fSector='all';
-  // reset toggle stati
+  fType='all';fSector='all';fTitolo='';
+  const sel=document.getElementById('filter-titolo');
+  if(sel) sel.value='';
   ['tog-comm','tog-tax','tog-cos','tog-tax-lat','tog-comm-lat'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.checked=true;
   });
@@ -1016,14 +1023,28 @@ function buildFilterChips(){
       `<button class="filter-chip${fSector==='all'?' on':''}" data-fsector="all" onclick="setFilter('sector','all')"><span class="chip-dot"></span>Tutti</button>`+
       sectors.map(s=>`<button class="filter-chip${fSector===s?' on':''}" data-fsector="${s}" onclick="setFilter('sector','${s}')"><span class="chip-dot"></span>${s}</button>`).join('');
   }
+
+  // Dropdown titolo — posizioni aperte ordinate alfabeticamente
+  const portNow=getPort();
+  const titSel=document.getElementById('filter-titolo');
+  if(titSel){
+    const titoli=Object.values(portNow)
+      .filter(p=>p.qty>0)
+      .sort((a,b)=>a.titolo.localeCompare(b.titolo));
+    titSel.innerHTML='<option value="">— tutti —</option>'+
+      titoli.map(p=>{
+        const key=p.isin||p.titolo;
+        return `<option value="${key}"${key===fTitolo?' selected':''}>${p.titolo}</option>`;
+      }).join('');
+  }
 }
 
 function filterKey(isin){
-  // returns true if the ISIN passes current filters
   const a=acq.find(x=>(x.isin||x.titolo)===isin);
   if(!a) return true;
   if(fType!=='all'&&a.tipo!==fType) return false;
   if(fSector!=='all'&&a.settore!==fSector) return false;
+  if(fTitolo!==''&&(a.isin||a.titolo)!==fTitolo) return false;
   return true;
 }
 
@@ -1971,10 +1992,17 @@ function updDash(){
   const filteredCed=ced.filter(c=>filterKey(c.isin||c.titolo));
 
   // Filtro attivo label
-  const isFiltered=fType!=='all'||fSector!=='all';
+  const isFiltered=fType!=='all'||fSector!=='all'||fTitolo!=='';
   const fc=document.getElementById('filter-count');
   if(isFiltered){
-    const parts=[];if(fType!=='all')parts.push('Tipo: '+fType);if(fSector!=='all')parts.push('Settore: '+fSector);
+    const parts=[];
+    if(fType!=='all') parts.push('Tipo: '+fType);
+    if(fSector!=='all') parts.push('Settore: '+fSector);
+    if(fTitolo!==''){
+      const port=getPort();
+      const nome=port[fTitolo]?.titolo||fTitolo;
+      parts.push('Titolo: '+nome);
+    }
     fc.textContent='Filtro attivo: '+parts.join(' · ');
   } else fc.textContent='';
 
