@@ -561,9 +561,13 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:10px;">
 
           <!-- 1. Duration -->
-          <div class="metric-card" style="padding:12px 16px;">
-            <div class="metric-label">Duration</div>
-            <div class="metric-value neutral" id="m-duration" style="font-size:20px;">—</div>
+          <div class="metric-card" style="padding:12px 16px;position:relative;overflow:hidden;">
+            <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--blue),transparent);opacity:0.6;"></div>
+            <div class="metric-label" style="color:var(--blue);">Duration</div>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-top:6px;flex-wrap:wrap;">
+              <div id="m-duration" style="font-family:var(--serif);font-size:20px;color:var(--blue);line-height:1;letter-spacing:-0.01em;">—</div>
+              <div id="m-duration-ext" style="font-family:var(--mono);font-size:10px;color:var(--blue);opacity:0.7;line-height:1.3;"></div>
+            </div>
           </div>
 
           <!-- 2. Capitale investito -->
@@ -2027,11 +2031,25 @@ function updMetrics(){
   // 1. Duration
   const dur=calcDuration(fAcq,fVen);
   const mDur=document.getElementById('m-duration');
+  const mDurExt=document.getElementById('m-duration-ext');
   if(mDur){
     if(dur===null||isNaN(dur)){
       mDur.textContent='—';
+      if(mDurExt) mDurExt.textContent='';
     } else {
       mDur.textContent=dur.toFixed(2)+' anni';
+      if(mDurExt){
+        const anni=Math.floor(dur);
+        const mesiTot=Math.round((dur-anni)*12);
+        const mesi=mesiTot%12;
+        const giorniTot=Math.round((dur-anni-(mesiTot/12))*365);
+        const giorni=Math.max(0,Math.round(((dur*12)%1)*30));
+        let parts=[];
+        if(anni>0) parts.push(`${anni}a`);
+        if(mesi>0) parts.push(`${mesi}m`);
+        if(giorni>0&&anni===0) parts.push(`${giorni}g`);
+        mDurExt.textContent=parts.join(' ');
+      }
     }
   }
 
