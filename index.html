@@ -1104,8 +1104,72 @@ function rendAna(){
     <td class="muted" style="font-size:11px">${a.settore||'—'}</td>
     <td class="muted">${a.valuta||'—'}</td>
     <td class="muted" style="font-size:11px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.note||'—'}</td>
-    <td><button class="btn-del" onclick="delAna(${a.id})">✕</button></td>
+    <td style="white-space:nowrap">
+      <button class="btn-edit" onclick="editAna(${a.id})">✎</button>
+      <button class="btn-del" onclick="delAna(${a.id})">✕</button>
+    </td>
   </tr>`).join('');
+}
+
+function editAna(id){
+  const a=ana.find(x=>x.id===id);if(!a)return;
+  const TIPI=[{v:'',l:'— seleziona —'},{v:'ETF',l:'ETF'},{v:'Stock',l:'Stock'},{v:'Bond',l:'Bond / Obbligazione'},{v:'Fund',l:'Fondo'},{v:'Altro',l:'Altro'}];
+  const SETTORI=[{v:'',l:'— seleziona —'},{v:'Energia',l:'Energia'},{v:'Tecnologia',l:'Tecnologia'},{v:'Finanza',l:'Finanza'},{v:'Salute',l:'Salute / Pharma'},{v:'Industria',l:'Industria'},{v:'Consumi',l:'Consumi'},{v:'Utility',l:'Utility'},{v:'Immobiliare',l:'Immobiliare'},{v:'Materie Prime',l:'Materie Prime'},{v:'Telecomunicazioni',l:'Telecomunicazioni'},{v:'Diversificato',l:'Diversificato'},{v:'Governativo',l:'Governativo'},{v:'Altro',l:'Altro'}];
+  const VALUTE=[{v:'EUR',l:'EUR €'},{v:'USD',l:'USD $'},{v:'GBP',l:'GBP £'},{v:'CHF',l:'CHF'},{v:'JPY',l:'JPY ¥'},{v:'Altra',l:'Altra'}];
+  const selOpts=(arr,val)=>arr.map(o=>`<option value="${o.v}"${o.v===val?' selected':''}>${o.l}</option>`).join('');
+  const body=`<div class="fg">
+    <div class="fgroup full"><label class="fl">Nome / Descrizione</label><input type="text" id="em-nome" value="${a.nome||''}"></div>
+    <div class="fgroup"><label class="fl">ISIN</label><input type="text" id="em-isin" value="${a.isin||''}"></div>
+    <div class="fgroup"><label class="fl">Ticker <span class="fl-b">es. ENI.MI · AAPL</span></label><input type="text" id="em-ticker" value="${a.ticker||''}"></div>
+    <div class="fgroup"><label class="fl">Mercato / Borsa</label><input type="text" id="em-mercato" value="${a.mercato||''}"></div>
+    <div class="fgroup"><label class="fl">Tipologia</label><select id="em-tipo">${selOpts(TIPI,a.tipo||'')}</select></div>
+    <div class="fgroup"><label class="fl">Settore</label><select id="em-settore">${selOpts(SETTORI,a.settore||'')}</select></div>
+    <div class="fgroup"><label class="fl">Valuta</label><select id="em-valuta">${selOpts(VALUTE,a.valuta||'EUR')}</select></div>
+    <div class="fgroup full"><label class="fl">Note</label><input type="text" id="em-note" value="${a.note||''}"></div>
+  </div>
+  <div class="abox info" style="margin-top:12px;">ℹ Le modifiche verranno propagate automaticamente a tutti gli acquisti, cedole e vendite relativi a questo titolo.</div>`;
+  openEdit('Modifica <em>Anagrafica</em>','// '+a.nome,body,{type:'ana',id});
+}
+
+function saveEditAna(id){
+  const idx=ana.findIndex(x=>x.id===id);if(idx<0)return;
+  const nome=document.getElementById('em-nome').value.trim();
+  if(!nome){toast('Il nome è obbligatorio',true);return;}
+  const vecchio=ana[idx];
+  const nuovo={
+    ...vecchio,
+    nome,
+    isin:document.getElementById('em-isin').value.trim().toUpperCase(),
+    ticker:document.getElementById('em-ticker').value.trim().toUpperCase(),
+    mercato:document.getElementById('em-mercato').value.trim(),
+    tipo:document.getElementById('em-tipo').value,
+    settore:document.getElementById('em-settore').value,
+    valuta:document.getElementById('em-valuta').value,
+    note:document.getElementById('em-note').value.trim(),
+  };
+  ana[idx]=nuovo;
+
+  // Propaga modifiche a tutti i movimenti che usano questo titolo
+  // Chiave di matching: vecchio isin (se esiste) o vecchio nome
+  const matchKey = r => (r.isin&&r.isin===vecchio.isin) || (r.titolo===vecchio.nome);
+
+  acq=acq.map(a=>matchKey(a)?{...a,titolo:nuovo.nome,isin:nuovo.isin,ticker:nuovo.ticker,tipo:nuovo.tipo,settore:nuovo.settore}:a);
+  ced=ced.map(c=>matchKey(c)?{...c,titolo:nuovo.nome,isin:nuovo.isin,tipo:nuovo.tipo}:c);
+  ven=ven.map(v=>matchKey(v)?{...v,titolo:nuovo.nome,isin:nuovo.isin,tipo:nuovo.tipo}:v);
+
+  save();
+  rendAna();rendAcq();rendCed();rendVen();
+  fillAnaSelect();fillSelects();
+  buildFilterChips();updDash();
+
+  // Sync cloud
+  cUpsert('anagrafica',nuovo);
+  acq.filter(matchKey).forEach(a=>cUpsert('acquisti',a));
+  ced.filter(matchKey).forEach(c=>cUpsert('cedole',c));
+  ven.filter(matchKey).forEach(v=>cUpsert('vendite',v));
+
+  closeEdit();
+  toast('Anagrafica aggiornata e propagata ✓');
 }
 
 function delAna(id){
@@ -1514,6 +1578,7 @@ function saveEdit(){
   if(_editCtx.type==='acq') saveEditAcq(_editCtx.id);
   else if(_editCtx.type==='ced') saveEditCed(_editCtx.id);
   else if(_editCtx.type==='ven') saveEditVen(_editCtx.id);
+  else if(_editCtx.type==='ana') saveEditAna(_editCtx.id);
 }
 
 /* ══ COSTI ══ */
@@ -2475,14 +2540,17 @@ window.updPortPrice=async function(key,field,val){
 async function fetchPricesFromFinnhub(){
   const port=getPort();
   const entries=Object.values(port).filter(p=>p.qty>0&&p.ticker);
-  if(!entries.length){toast('Nessun ticker in portafoglio',true);return;}
+  if(!entries.length){toast('Nessun ticker in portafoglio. Aggiungilo in anagrafica.',true);return;}
   const btn=document.getElementById('btn-refresh-prices');
   if(btn){btn.textContent='⟳ Aggiornamento...';btn.disabled=true;}
-  let ok=0,err=0;
+  let ok=0,err=0,errTickers=[];
   for(const p of entries){
     try{
-      const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=${p.ticker}&token=${FH_KEY}`);
+      const url=`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(p.ticker)}&token=${FH_KEY}`;
+      const r=await fetch(url);
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);
       const d=await r.json();
+      console.log(`Finnhub ${p.ticker}:`, d);
       if(d.c&&d.c>0){
         const key=p.isin||p.titolo;
         if(!portPrices[key]) portPrices[key]={};
@@ -2491,14 +2559,23 @@ async function fetchPricesFromFinnhub(){
         DB.set('portPrices',portPrices);
         await cSavePrice(key,d.c);
         ok++;
-      } else err++;
-    }catch{err++;}
+      } else {
+        console.warn(`Ticker ${p.ticker}: prezzo 0 o non trovato`, d);
+        errTickers.push(p.ticker);
+        err++;
+      }
+    }catch(e){
+      console.error(`Errore ${p.ticker}:`, e);
+      errTickers.push(p.ticker);
+      err++;
+    }
     await new Promise(r=>setTimeout(r,300));
   }
   if(btn){btn.textContent='↻ Prezzi';btn.disabled=false;}
   Object.values(getPort()).filter(p=>p.qty>0).forEach(p=>recalcPortRow(p.isin||p.titolo));
   updDashKPI();
-  toast(`Aggiornati: ${ok} ✓${err?' · '+err+' n/d':''}`);
+  if(ok>0) toast(`Aggiornati: ${ok} ✓${err?' · Falliti: '+errTickers.join(', '):''}`);
+  else toast(`Nessun prezzo trovato. Ticker non validi: ${errTickers.join(', ')}`, true);
 }
 
 /* ── LOGIN / APP SHELL ── */
