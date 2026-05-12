@@ -2628,7 +2628,63 @@ async function fetchPricesFromFinnhub(){
   }
 }
 
-/* ── LOGIN / APP SHELL ── */
+/* ── AUTO-REFRESH PREZZI ── */
+let _autoRefreshTimer = null;
+const AUTO_REFRESH_INTERVAL = 60; // secondi
+
+function startAutoRefresh(){
+  stopAutoRefresh();
+  let countdown = AUTO_REFRESH_INTERVAL;
+
+  const updateBtn=()=>{
+    const btn=document.getElementById('btn-refresh-prices');
+    if(!btn) return;
+    const open=isMktOpen();
+    if(open){
+      const lbl=btn.querySelector('span');
+      if(lbl) lbl.textContent=`Prezzi (${countdown}s)`;
+    } else {
+      const lbl=btn.querySelector('span');
+      if(lbl) lbl.textContent='Prezzi (chiuso)';
+    }
+  };
+
+  // Tick ogni secondo per il countdown visivo
+  _autoRefreshTimer = setInterval(()=>{
+    countdown--;
+    updateBtn();
+    if(countdown<=0){
+      countdown=AUTO_REFRESH_INTERVAL;
+      const dashVisible=document.getElementById('tab-dashboard')?.classList.contains('active');
+      if(dashVisible && isMktOpen()) fetchPricesFromFinnhub();
+    }
+  }, 1000);
+
+  updateBtn();
+  // Prima chiamata immediata se borsa aperta
+  if(isMktOpen()){
+    const dashVisible=document.getElementById('tab-dashboard')?.classList.contains('active');
+    if(dashVisible) fetchPricesFromFinnhub();
+  }
+}
+
+function stopAutoRefresh(){
+  if(_autoRefreshTimer){ clearInterval(_autoRefreshTimer); _autoRefreshTimer=null; }
+}
+
+function isMktOpen(){
+  // Borsa Italiana: lun-ven 09:00-17:35 ora italiana (CET=UTC+1, CEST=UTC+2)
+  const now = new Date();
+  const day = now.getDay(); // 0=dom, 6=sab
+  if(day===0||day===6) return false;
+  // Converti in ora italiana
+  const itStr = now.toLocaleString('en-US',{timeZone:'Europe/Rome',hour:'2-digit',minute:'2-digit',hour12:false});
+  const [hh,mm] = itStr.split(':').map(Number);
+  const mins = hh*60+mm;
+  return mins>=540 && mins<=1055; // 09:00–17:35
+}
+
+
 function showLoginScreen(){
   document.getElementById('app-shell').style.display='none';
   document.getElementById('login-screen').style.display='flex';
@@ -2649,6 +2705,7 @@ async function doLogin(){
     await sbLogin(email,pass);
     await cloudPull();
     initApp();showAppShell();
+    startAutoRefresh();
   }catch(e){
     err.textContent=e.message;
     btn.textContent='Accedi';btn.disabled=false;
@@ -2688,14 +2745,15 @@ document.addEventListener('DOMContentLoaded',async()=>{
       await sbQ(`acquisti?user_id=eq.${SB_UID}&limit=1`);
       await cloudPull();
       initApp();showAppShell();
+      startAutoRefresh();
     }catch(e){
       const ok=await tryRefresh();
-      if(ok){await cloudPull();initApp();showAppShell();}
+      if(ok){await cloudPull();initApp();showAppShell();startAutoRefresh();}
       else showLoginScreen();
     }
   } else if(SB_REFRESH){
     const ok=await tryRefresh();
-    if(ok){await cloudPull();initApp();showAppShell();}
+    if(ok){await cloudPull();initApp();showAppShell();startAutoRefresh();}
     else showLoginScreen();
   } else {
     // Nessuna sessione: mostra login ma carica dati locali in background
