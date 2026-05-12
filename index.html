@@ -419,10 +419,10 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
   <div id="tab-dashboard" class="tab-content active">
     <div class="content" style="padding-top:24px;">
 
-      <!-- FILTER BAR — due righe -->
+      <!-- FILTER BAR — tre righe -->
       <div style="background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-bottom:14px;">
         <!-- Riga 1: filtri tipo, settore e titolo -->
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto;margin-bottom:10px;padding-bottom:2px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto;margin-bottom:8px;padding-bottom:2px;">
           <span class="filter-bar-label" style="white-space:nowrap;">Dossier:</span>
           <div id="dossier-chips" style="display:flex;gap:6px;align-items:center;flex-shrink:0;"></div>
           <div class="filter-sep"></div>
@@ -436,10 +436,14 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
           <select id="filter-titolo" onchange="setFilter('titolo',this.value)" style="padding:4px 8px;font-family:var(--mono);font-size:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text2);cursor:pointer;min-width:130px;max-width:200px;flex-shrink:0;">
             <option value="">— tutti —</option>
           </select>
-          <button class="filter-reset" onclick="resetFilters()" style="margin-left:auto;white-space:nowrap;flex-shrink:0;">✕ Reset</button>
-          <span class="filter-count" id="filter-count" style="white-space:nowrap;flex-shrink:0;"></span>
         </div>
-        <!-- Riga 2: toggle + inflazione -->
+        <!-- Riga 2: filtri attivi + reset (visibile solo se filtro attivo) -->
+        <div id="filter-active-bar" style="display:none;align-items:center;gap:8px;margin-bottom:8px;padding:6px 10px;background:rgba(212,168,83,0.06);border:1px solid rgba(212,168,83,0.15);border-radius:8px;">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--gold);">◆ Filtro attivo:</span>
+          <span class="filter-count" id="filter-count" style="font-family:var(--mono);font-size:11px;color:var(--text2);flex:1;"></span>
+          <button class="filter-reset" onclick="resetFilters()" style="white-space:nowrap;color:var(--red);">✕ Reset filtri</button>
+        </div>
+        <!-- Riga 3: toggle + inflazione -->
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:9px;border-top:1px solid var(--border);">
           <span class="filter-bar-label" style="margin-right:2px;">Includi:</span>
           <label class="toggle-wrap" title="Includi commissioni nei calcoli">
@@ -2315,19 +2319,25 @@ function updDash(){
   const filteredCed=ced.filter(c=>filterKey(c.isin||c.titolo));
 
   // Filtro attivo label
-  const isFiltered=fType!=='all'||fSector!=='all'||fTitolo!=='';
+  const isFiltered=fType!=='all'||fSector!=='all'||fTitolo!==''||fDossier!=='all';
   const fc=document.getElementById('filter-count');
+  const fab=document.getElementById('filter-active-bar');
   if(isFiltered){
     const parts=[];
+    if(fDossier!=='all') parts.push('Dossier: '+dos.find(d=>String(d.id)===String(fDossier))?.nome||fDossier);
     if(fType!=='all') parts.push('Tipo: '+fType);
     if(fSector!=='all') parts.push('Settore: '+fSector);
     if(fTitolo!==''){
-      const port=getPort();
-      const nome=port[fTitolo]?.titolo||fTitolo;
+      const portNow=getPort();
+      const nome=portNow[fTitolo]?.titolo||fTitolo;
       parts.push('Titolo: '+nome);
     }
-    fc.textContent='Filtro attivo: '+parts.join(' · ');
-  } else fc.textContent='';
+    if(fc) fc.textContent=parts.join(' · ');
+    if(fab) fab.style.display='flex';
+  } else {
+    if(fc) fc.textContent='';
+    if(fab) fab.style.display='none';
+  }
 
   // KPI, metriche e valore liquidazione — tutto in updDashKPI
   updDashKPI();
