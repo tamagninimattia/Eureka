@@ -522,43 +522,46 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
         <!-- 6 CARD METRICHE PRINCIPALI -->
         <div style="display:grid;grid-template-columns:5fr 3fr 3fr 4fr 3fr 3fr;gap:10px;margin-bottom:10px;">
 
-          <!-- 1. Valore netto di liquidazione -->
-          <div id="hero-liq" class="metric-card" style="padding:18px 20px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);">
+          <!-- 1. Valore netto di liquidazione — sempre verde, font più grande -->
+          <div id="hero-liq" class="metric-card" style="padding:18px 22px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);">
             <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);"></div>
             <div style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--green);font-weight:700;margin-bottom:10px;">Valore netto di liquidazione</div>
             <div id="mkt-net-liq" style="font-family:var(--serif);font-size:42px;color:var(--green);line-height:1;letter-spacing:-0.03em;">—</div>
           </div>
 
-          <!-- 2. TIR reale -->
-          <div id="cell-tir-reale" class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;transition:background 0.3s,border-color 0.3s;">
-            <div id="label-tir-reale" style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;margin-bottom:10px;transition:color 0.3s;color:var(--text2);">TIR reale</div>
-            <div id="m-xirr-real" style="font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-0.015em;transition:color 0.3s;color:var(--text);"></div>
+          <!-- 2. TIR reale — dinamico -->
+          <div id="cell-tir-reale" class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);transition:background 0.3s,border-color 0.3s;">
+            <div id="line-tir-reale" style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);transition:background 0.3s;"></div>
+            <div id="label-tir-reale" style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;margin-bottom:10px;color:var(--green);transition:color 0.3s;">TIR reale</div>
+            <div id="m-xirr-real" style="font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-0.03em;color:var(--green);transition:color 0.3s;"></div>
           </div>
 
-          <!-- 3. TIR nominale -->
-          <div id="cell-tir-nom" class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;transition:background 0.3s,border-color 0.3s;">
-            <div id="label-tir-nom" style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:10px;transition:color 0.3s;color:var(--text2);">TIR nominale</div>
-            <div id="m-xirr" style="font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-0.015em;transition:color 0.3s;color:var(--text);"></div>
+          <!-- 3. TIR nominale — dinamico -->
+          <div id="cell-tir-nom" class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);transition:background 0.3s,border-color 0.3s;">
+            <div id="line-tir-nom" style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);transition:background 0.3s;"></div>
+            <div id="label-tir-nom" style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;margin-bottom:10px;color:var(--green);transition:color 0.3s;">TIR nominale</div>
+            <div id="m-xirr" style="font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-0.03em;color:var(--green);transition:color 0.3s;"></div>
           </div>
 
-          <!-- 4. Risultato netto totale -->
-          <div id="cell-risultato" class="metric-card" style="padding:18px 18px;position:relative;overflow:hidden;transition:background 0.3s,border-color 0.3s;">
-            <div id="label-risultato" style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;margin-bottom:10px;transition:color 0.3s;color:var(--text2);">Risultato netto totale</div>
-            <div id="m-risultato-netto" style="font-family:var(--serif);font-size:32px;line-height:1;letter-spacing:-0.025em;transition:color 0.3s;color:var(--text);">—</div>
+          <!-- 4. Risultato netto totale — dinamico -->
+          <div id="cell-risultato" class="metric-card" style="padding:18px 18px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);transition:background 0.3s,border-color 0.3s;">
+            <div id="line-risultato" style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);transition:background 0.3s;"></div>
+            <div id="label-risultato" style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;margin-bottom:10px;color:var(--green);transition:color 0.3s;">Risultato netto totale</div>
+            <div id="m-risultato-netto" style="font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-0.03em;color:var(--green);transition:color 0.3s;">—</div>
           </div>
 
-          <!-- 5. Cedole & Div. netti -->
-          <div class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;">
-            <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--green),transparent);opacity:0.5;"></div>
-            <div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:0.11em;color:var(--green);margin-bottom:10px;">Cedole &amp; Div. netti</div>
-            <div id="m-cedole-tot" style="font-family:var(--serif);font-size:28px;color:var(--green);line-height:1;letter-spacing:-0.01em;">—</div>
+          <!-- 5. Cedole & Div. netti — sempre verde -->
+          <div class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);">
+            <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);"></div>
+            <div style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;color:var(--green);margin-bottom:10px;">Cedole &amp; Div. netti</div>
+            <div id="m-cedole-tot" style="font-family:var(--serif);font-size:28px;color:var(--green);line-height:1;letter-spacing:-0.03em;">—</div>
           </div>
 
-          <!-- 6. P&L vendite netto -->
-          <div id="cell-pl-vendite" class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;transition:background 0.3s,border-color 0.3s;">
-            <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--text3),transparent);opacity:0.5;" id="line-pl-vendite"></div>
-            <div id="label-pl-vendite" style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:0.11em;color:var(--text2);margin-bottom:10px;transition:color 0.3s;">P&amp;L vendite netto</div>
-            <div id="m-pl-vendite" style="font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-0.01em;transition:color 0.3s;color:var(--text);">—</div>
+          <!-- 6. P&L vendite netto — dinamico -->
+          <div id="cell-pl-vendite" class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);transition:background 0.3s,border-color 0.3s;">
+            <div id="line-pl-vendite" style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);transition:background 0.3s;"></div>
+            <div id="label-pl-vendite" style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;color:var(--green);margin-bottom:10px;transition:color 0.3s;">P&amp;L vendite netto</div>
+            <div id="m-pl-vendite" style="font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-0.03em;color:var(--green);transition:color 0.3s;">—</div>
           </div>
 
         </div>
@@ -678,6 +681,17 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
     <div class="content">
       <div class="card">
         <div class="ch"><div class="ch-left"><div class="ch-ico">☰</div><div class="ch-title">Nuovo titolo</div></div></div>
+
+        <!-- RICERCA YAHOO FINANCE -->
+        <div style="margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border);">
+          <label class="fl" style="margin-bottom:8px;display:block;">Cerca su Yahoo Finance <span class="fl-b">per nome, ticker o ISIN</span></label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" id="yf-search" placeholder="es. ENI · IT0003132476 · IWRD.MI" style="flex:1;" oninput="onYfSearchInput()" onkeydown="if(event.key==='Enter')cercaYahoo()">
+            <button class="btn" onclick="cercaYahoo()" id="yf-btn" style="white-space:nowrap;padding:10px 18px;">🔍 Cerca</button>
+          </div>
+          <div id="yf-results" style="margin-top:8px;display:none;flex-direction:column;gap:4px;max-height:240px;overflow-y:auto;"></div>
+        </div>
+
         <div class="fg">
           <div class="fgroup full"><label class="fl">Nome / Descrizione</label><input type="text" id="an-nome" placeholder="es. ENI SpA · iShares Core MSCI World ETF"></div>
           <div class="fgroup"><label class="fl">ISIN</label><input type="text" id="an-isin" placeholder="es. IT0003132476"></div>
@@ -1342,22 +1356,18 @@ function setHeroCell(cellId, labelId, valId, value, hasVal){
   const cell=document.getElementById(cellId);
   const lbl=document.getElementById(labelId);
   const val=document.getElementById(valId);
+  const line=document.getElementById('line-'+cellId.replace('cell-',''));
   if(!cell||!lbl||!val) return;
-  if(!hasVal){
-    lbl.style.color='var(--text2)';
-    val.style.color='var(--text3)';
-    cell.style.background='';
-    cell.style.borderColor='';
-    return;
-  }
-  const isPos=value>=0;
+  const isPos=!hasVal||value>=0;
   const c=isPos?'var(--green)':'var(--red)';
   const bg=isPos?'rgba(52,201,126,0.06)':'rgba(224,84,112,0.06)';
   const border=isPos?'rgba(52,201,126,0.2)':'rgba(224,84,112,0.2)';
+  const lineColor=isPos?'var(--green)':'var(--red)';
   lbl.style.color=c;
   val.style.color=c;
   cell.style.background=bg;
   cell.style.borderColor=border;
+  if(line) line.style.background=`linear-gradient(90deg,transparent,${lineColor},transparent)`;
 }
 
 
@@ -1425,7 +1435,83 @@ function tipoBadge(tipo){
   return `<span class="badge ${map[tipo]||'t-other'}">${tipo||'—'}</span>`;
 }
 
-/* ══ ANAGRAFICA ══ */
+/* ══ RICERCA YAHOO FINANCE ══ */
+let _yfTimer=null;
+
+function onYfSearchInput(){
+  clearTimeout(_yfTimer);
+  const q=document.getElementById('yf-search')?.value.trim();
+  if(!q||q.length<2){
+    const r=document.getElementById('yf-results');
+    if(r){r.style.display='none';r.innerHTML='';}
+    return;
+  }
+  _yfTimer=setTimeout(cercaYahoo,500);
+}
+
+async function cercaYahoo(){
+  const q=document.getElementById('yf-search')?.value.trim();
+  if(!q){return;}
+  const btn=document.getElementById('yf-btn');
+  const res=document.getElementById('yf-results');
+  if(btn){btn.textContent='⏳';btn.disabled=true;}
+  if(res){res.style.display='flex';res.innerHTML='<div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px;">Ricerca in corso…</div>';}
+  try{
+    const r=await fetch(`${SB_URL}/functions/v1/get-prices`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`},
+      body:JSON.stringify({search:q})
+    });
+    const data=await r.json();
+    if(!r.ok) throw new Error(data.error||'Errore');
+    if(!data.length){
+      res.innerHTML='<div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px;">Nessun risultato trovato.</div>';
+    } else {
+      res.innerHTML=data.map(d=>`
+        <div onclick="selezionaTitolo(${JSON.stringify(d).replace(/"/g,'&quot;')})"
+          style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;"
+          onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
+          <div>
+            <div style="font-family:var(--sans);font-size:13px;color:var(--text);font-weight:600;">${d.name}</div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:2px;">${d.symbol}${d.exchange?' · '+d.exchange:''}${d.isin?' · '+d.isin:''}</div>
+          </div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text2);background:var(--glass);border-radius:4px;padding:2px 8px;flex-shrink:0;">${d.type}</div>
+        </div>`).join('');
+    }
+  }catch(e){
+    res.innerHTML=`<div style="font-family:var(--mono);font-size:11px;color:var(--red);padding:8px;">Errore: ${e.message}</div>`;
+  }finally{
+    if(btn){btn.textContent='🔍 Cerca';btn.disabled=false;}
+  }
+}
+
+function selezionaTitolo(d){
+  // Precompila il form anagrafica con i dati del titolo selezionato
+  const nome=document.getElementById('an-nome');
+  const isin=document.getElementById('an-isin');
+  const ticker=document.getElementById('an-ticker');
+  const tipo=document.getElementById('an-tipo');
+  const mercato=document.getElementById('an-mercato');
+
+  if(nome) nome.value=d.name||'';
+  if(isin&&d.isin) isin.value=d.isin;
+  if(ticker) ticker.value=d.symbol||'';
+  if(mercato) mercato.value=d.exchange||'';
+
+  // Inferisci tipo da quoteType Yahoo
+  const typeMap={ETF:'ETF',EQUITY:'Stock',BOND:'Bond',MUTUALFUND:'Fund',CURRENCY:'Altro',CRYPTOCURRENCY:'Altro'};
+  if(tipo&&d.type) tipo.value=typeMap[d.type.toUpperCase()]||'Altro';
+
+  // Nascondi risultati e svuota ricerca
+  const res=document.getElementById('yf-results');
+  const search=document.getElementById('yf-search');
+  if(res){res.style.display='none';res.innerHTML='';}
+  if(search) search.value='';
+
+  toast('Titolo precompilato — completa i campi mancanti e salva ✓');
+}
+
+
 function addAnagrafica(){
   const nome=document.getElementById('an-nome').value.trim();
   const isin=document.getElementById('an-isin').value.trim().toUpperCase();
@@ -2417,7 +2503,10 @@ function updDash(){
           ondrop="onPortDrop(event)"
           ondragend="onPortDragEnd(event)">
         <td><span class="drag-handle" title="Trascina per riordinare">⠿</span></td>
-        <td class="td-n">${p.titolo}</td>
+        <td class="td-n">${p.ticker
+          ? `<a href="https://finance.yahoo.com/quote/${encodeURIComponent(p.ticker)}" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;border-bottom:1px dashed var(--text3);transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='var(--gold)';this.style.borderColor='var(--gold)'" onmouseout="this.style.color='var(--text)';this.style.borderColor='var(--text3)'">${p.titolo}</a>`
+          : p.titolo
+        }</td>
         <td class="gold">${E(p.costo)}</td>
         <td>
           <span style="font-family:var(--mono);font-size:13px;color:var(--text);">${prezVal!==''?E(+prezVal,4):'—'}</span>
