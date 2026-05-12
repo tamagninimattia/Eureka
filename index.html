@@ -2030,17 +2030,18 @@ function updDash(){
       const changePct = pp.changePct??null;
       const esc=CSS.escape(key);
 
-      // Badge variazione
+      // Badge variazione — solo percentuale, stesso font del prezzo
       let varBadge='';
-      if(prezVal!==''&&change!==null){
-        const isPos=change>=0;
+      if(prezVal!==''&&changePct!==null){
+        const isPos=changePct>=0;
         const sign=isPos?'+':'';
         varBadge=`<span style="
-          font-family:var(--mono);font-size:10px;font-weight:600;
+          font-family:var(--mono);font-size:13px;font-weight:600;
           color:${isPos?'var(--green)':'var(--red)'};
           background:${isPos?'rgba(52,201,126,0.1)':'rgba(224,84,112,0.1)'};
-          border-radius:4px;padding:2px 6px;margin-left:6px;white-space:nowrap;">
-          ${sign}${change.toFixed(2)} (${sign}${changePct!==null?changePct.toFixed(2):'?'}%)
+          border:1px solid ${isPos?'rgba(52,201,126,0.2)':'rgba(224,84,112,0.2)'};
+          border-radius:5px;padding:2px 7px;white-space:nowrap;">
+          ${sign}${changePct.toFixed(2)}%
         </span>`;
       }
       const updStr=pp.updatedAt?`<div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:2px;">${new Date(pp.updatedAt).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>`:'';
