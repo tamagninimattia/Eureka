@@ -849,12 +849,20 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
       <div class="card">
         <div class="ch"><div class="ch-left"><div class="ch-ico">◎</div><div class="ch-title">Nuovo stacco</div></div></div>
         <div class="fg">
-          <div class="fgroup"><label class="fl">Data stacco</label><input type="date" id="c-data" oninput="updCedQty()"></div>
+          <div class="fgroup"><label class="fl">Data stacco</label><input type="date" id="c-data" oninput="updCedQty();checkCedProvvisoria()"></div>
           <div class="fgroup"><label class="fl">Dossier</label><select id="c-dossier"><option value="">— seleziona dossier —</option></select></div>
           <div class="fgroup"><label class="fl">Data pagamento</label><input type="date" id="c-dpag"></div>
-          <div class="fgroup"><label class="fl">Titolo</label><select id="c-tit" onchange="updCedQty()"><option value="">— seleziona —</option></select></div>
+          <div class="fgroup"><label class="fl">Titolo</label><select id="c-tit" onchange="updCedQty();checkCedProvvisoria()"><option value="">— seleziona —</option></select></div>
+          <div class="fgroup full" style="align-items:center;gap:14px;display:flex;">
+            <label class="toggle-wrap" style="margin:0;">
+              <input type="checkbox" id="c-provvisoria" onchange="checkCedProvvisoria()">
+              <span class="toggle-pill"></span>
+              <span style="font-family:var(--mono);font-size:11px;color:var(--text2);">Stacco provvisorio <span class="fl-b" style="background:rgba(212,168,83,0.15);color:var(--gold);">ATTESO</span></span>
+            </label>
+            <span id="c-prov-hint" style="font-family:var(--mono);font-size:10px;color:var(--text3);display:none;">La quantità verrà calcolata al momento dello stacco in base al portafoglio</span>
+          </div>
           <div class="fgroup"><label class="fl">Importo unitario lordo (€)</label><input type="number" id="c-unit" step="0.0001" placeholder="0,0000" oninput="calcCed()"></div>
-          <div class="fgroup">
+          <div class="fgroup" id="c-qty-group">
             <label class="fl">Quantità <span class="fl-b" id="c-qty-b"></span></label>
             <input type="number" id="c-qty" step="1" placeholder="calcolata auto" oninput="calcCed()">
           </div>
@@ -864,7 +872,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
           <div class="fgroup"><label class="fl">Importo netto (€)</label><input type="number" id="c-netto" readonly placeholder="—"></div>
         </div>
         <div id="c-alert" class="abox warn" style="display:none"></div>
-        <div class="fa"><button class="btn" onclick="addCed()">+ Registra stacco</button></div>
+        <div class="fa"><button class="btn" onclick="addCed()" id="c-btn-add">+ Registra stacco</button></div>
       </div>
       <div class="card">
         <div class="ch"><div class="ch-left"><div class="ch-ico">◎</div><div class="ch-title">Storico cedole</div></div></div>
@@ -1711,41 +1719,121 @@ function calcCed(){
   document.getElementById('c-tax').value=tax.toFixed(2);
   document.getElementById('c-netto').value=(lordo-c-tax).toFixed(2);
 }
+function checkCedProvvisoria(){
+  const isProv=document.getElementById('c-provvisoria')?.checked;
+  const hint=document.getElementById('c-prov-hint');
+  const btn=document.getElementById('c-btn-add');
+  const qtyGroup=document.getElementById('c-qty-group');
+  if(hint) hint.style.display=isProv?'inline':'none';
+  if(btn) btn.textContent=isProv?'+ Aggiungi stacco atteso':'+ Registra stacco';
+  // Se provvisoria: nascondi qty (sarà calcolata auto), ricalcola
+  if(qtyGroup) qtyGroup.style.opacity=isProv?'0.4':'1';
+  calcCed();
+}
+
 function addCed(){
   const data=document.getElementById('c-data').value||today();
   const dpag=document.getElementById('c-dpag').value||'';
   const isin=document.getElementById('c-tit').value;
   const unit=parseFloat(document.getElementById('c-unit').value);
-  const qty=parseFloat(document.getElementById('c-qty').value);
   const comm=parseFloat(document.getElementById('c-comm').value)||0;
-  const tax=parseFloat(document.getElementById('c-tax').value)||0;
   const dossier_id=parseInt(document.getElementById('c-dossier')?.value)||dos[0]?.id||null;
-  if(!isin||isNaN(unit)||isNaN(qty)||qty<=0){toast('Compila tutti i campi (qtà > 0)',true);return;}
+  const provvisoria=document.getElementById('c-provvisoria')?.checked||false;
+
+  if(!isin||isNaN(unit)){toast('Seleziona il titolo e inserisci l\'importo unitario',true);return;}
+
+  let qty;
+  if(provvisoria){
+    // Per le provvisorie usa la qty attuale in portafoglio come stima
+    const port=getPort();
+    qty=port[isin]?.qty||0;
+    if(!qty){toast('Nessuna quantità in portafoglio per questo titolo',true);return;}
+  } else {
+    qty=parseFloat(document.getElementById('c-qty').value);
+    if(isNaN(qty)||qty<=0){toast('Inserisci la quantità',true);return;}
+  }
+
+  const tax=document.getElementById('c-tax').value?parseFloat(document.getElementById('c-tax').value):unit*qty*0.26;
   const lordo=unit*qty,netto=lordo-comm-tax;
   const tit=acq.find(a=>(a.isin||a.titolo)===isin);
   const titolo=tit?.titolo||isin;const tipo=tit?.tipo||'';
-  ced.push({id:Date.now(),data,dpag,isin,titolo,tipo,unit,qty,lordo,comm,tax,netto,dossier_id});
-  save();rendCed();toast('Cedola registrata ✓');
+
+  const rec={id:Date.now(),data,dpag,isin,titolo,tipo,unit,qty,lordo,comm,tax,netto,dossier_id,provvisoria,qty_prevista:qty};
+  ced.push(rec);
+  save();rendCed();
+  if(SB_TOKEN) cUpsert('cedole',rec);
+  toast(provvisoria?'Stacco atteso aggiunto ✓':'Cedola registrata ✓');
   ['c-unit','c-qty','c-comm','c-tax','c-lordo','c-netto'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('c-tit').value='';document.getElementById('c-dpag').value='';
   document.getElementById('c-qty-b').textContent='';document.getElementById('c-alert').style.display='none';
+  if(document.getElementById('c-provvisoria')) document.getElementById('c-provvisoria').checked=false;
+  checkCedProvvisoria();
 }
+
+// Controlla e conferma le cedole provvisorie con data stacco passata
+function verificaProvvisorie(){
+  const oggi=today();
+  let aggiornate=0;
+  ced.forEach(c=>{
+    if(!c.provvisoria) return;
+    if(c.data<=oggi){
+      // Stacco passato: aggiorna qty con quella attuale in portafoglio al momento dello stacco
+      const port=getPort();
+      const qtyReale=port[c.isin]?.qty||c.qty_prevista||c.qty;
+      c.qty=qtyReale;
+      c.lordo=c.unit*qtyReale;
+      c.tax=c.lordo*0.26;
+      c.netto=c.lordo-c.comm-c.tax;
+      c.provvisoria=false;
+      aggiornate++;
+      if(SB_TOKEN) cUpsert('cedole',c);
+    }
+  });
+  if(aggiornate>0){
+    save();rendCed();
+    toast(`${aggiornate} cedola/e confermata/e automaticamente ✓`);
+  }
+}
+
 function rendCed(){
   const tb=document.getElementById('tb-ced');
-  if(!ced.length){tb.innerHTML='<tr><td colspan="10" class="empty">Nessuna cedola registrata</td></tr>';return;}
-  tb.innerHTML=ced.slice().reverse().map(c=>`<tr>
-    <td class="muted">${c.data}</td>
-    <td class="muted">${c.dpag||'<span style="color:var(--text3)">—</span>'}</td>
-    <td class="td-n">${c.titolo}</td>
-    <td>${E(c.unit,4)}</td><td>${N(c.qty,0)}</td>
-    <td>${E(c.lordo)}</td><td class="neg">${E(c.comm)}</td>
-    <td class="neg">${E(c.tax)}</td><td class="pos">${E(c.netto)}</td>
-    <td style="white-space:nowrap">
-      <button class="btn-edit" onclick="editCed(${c.id})">✎</button>
-      <button class="btn-del" onclick="delCed(${c.id})">✕</button>
-    </td>
-  </tr>`).join('');
+  if(!ced.length){tb.innerHTML='<tr><td colspan="11" class="empty">Nessuna cedola registrata</td></tr>';return;}
+  tb.innerHTML=ced.slice().reverse().map(c=>{
+    const isProv=c.provvisoria;
+    const rowStyle=isProv?'background:rgba(212,168,83,0.06);':'';
+    const badge=isProv?`<span style="font-family:var(--mono);font-size:9px;background:rgba(212,168,83,0.15);color:var(--gold);border-radius:3px;padding:1px 5px;margin-left:4px;">ATTESA</span>`:'';
+    return `<tr style="${rowStyle}">
+      <td class="muted">${c.data}</td>
+      <td class="muted">${c.dpag||'<span style="color:var(--text3)">—</span>'}</td>
+      <td class="td-n">${c.titolo}${badge}</td>
+      <td>${E(c.unit,4)}</td><td>${N(c.qty,0)}</td>
+      <td style="${isProv?'color:var(--gold);opacity:0.7;':''}">${E(c.lordo)}</td>
+      <td class="neg">${E(c.comm)}</td>
+      <td class="neg">${E(c.tax)}</td>
+      <td class="${isProv?'':'pos'}" style="${isProv?'color:var(--gold);opacity:0.7;':''}">${E(c.netto)}</td>
+      <td style="white-space:nowrap">
+        ${isProv?`<button class="btn-ghost" style="font-size:10px;padding:4px 8px;" onclick="confermaProvvisoria(${c.id})">✓ Conferma</button>`:''}
+        <button class="btn-edit" onclick="editCed(${c.id})">✎</button>
+        <button class="btn-del" onclick="delCed(${c.id})">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
 }
+
+function confermaProvvisoria(id){
+  const c=ced.find(x=>x.id===id);if(!c)return;
+  const port=getPort();
+  const qtyReale=port[c.isin]?.qty||c.qty;
+  c.qty=qtyReale;
+  c.lordo=c.unit*qtyReale;
+  c.tax=c.lordo*0.26;
+  c.netto=c.lordo-c.comm-c.tax;
+  c.provvisoria=false;
+  save();rendCed();updDash();
+  if(SB_TOKEN) cUpsert('cedole',c);
+  toast('Cedola confermata con '+N(qtyReale,0)+' quote ✓');
+}
+
 function delCed(id){if(!confirm('Eliminare?'))return;ced=ced.filter(c=>c.id!==id);save();rendCed();toast('Eliminata');}
 
 /* ══ VENDITE ══ */
@@ -2548,10 +2636,19 @@ function updDash(){
       <td class="neg">${E(v.tax)}</td><td class="${v.net>=0?'pos':'neg'}">${E(v.net)}</td>
     </tr>`).join('');
 
-  // Cedole
+  // Cedole (provvisorie in oro)
   const tbc=document.getElementById('tb-ced-r');
   tbc.innerHTML=!filteredCed.length?'<tr><td colspan="4" class="empty">Nessuna cedola'+(isFiltered?' per il filtro selezionato':'')+'</td></tr>':
-    filteredCed.slice().reverse().map(c=>`<tr><td class="muted">${c.data}</td><td class="td-n">${c.titolo}</td><td>${tipoBadge(c.tipo)}</td><td class="pos">${E(c.netto)}</td></tr>`).join('');
+    filteredCed.slice().reverse().map(c=>{
+      const isProv=c.provvisoria;
+      const badge=isProv?`<span style="font-family:var(--mono);font-size:9px;background:rgba(212,168,83,0.15);color:var(--gold);border-radius:3px;padding:1px 5px;margin-left:4px;">ATTESA</span>`:'';
+      return `<tr style="${isProv?'background:rgba(212,168,83,0.04);':''}">
+        <td class="muted">${c.data}</td>
+        <td class="td-n">${c.titolo}${badge}</td>
+        <td>${tipoBadge(c.tipo)}</td>
+        <td style="${isProv?'color:var(--gold);':'color:var(--green);'}">${E(c.netto)}</td>
+      </tr>`;
+    }).join('');
 
   // Costi (sempre globali)
   const tbk=document.getElementById('tb-cos-r');
@@ -3194,6 +3291,7 @@ function initApp(){
   fillDossierSelects();
   rendAna();rendAcq();rendCed();rendVen();rendCos();
   fillAnaSelect();buildFilterChips();updDash();updMinus();
+  verificaProvvisorie(); // conferma automaticamente le cedole con data stacco passata
   ['a-data','c-data','c-dpag','v-data','k-data'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value=today();
   });
