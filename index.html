@@ -482,8 +482,8 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
             <th>Titolo</th>
             <th>Costo carico</th>
             <th>Prezzo attuale</th>
-            <th>Controvalore</th><th>P/L latente</th>
-            <th>Imposte lat.</th><th>Val. liquidaz.</th>
+            <th>Variazione</th>
+            <th>Controvalore</th>
           </tr></thead>
           <tbody id="tb-port"></tbody>
         </table></div>
@@ -1761,37 +1761,21 @@ function updMetrics(){
 }
 
 function aggiornaRigaTotale(tit){
-  // Somma i valori calcolati da recalcPortRow per ogni titolo
-  let totCtv=0,totPl=0,totTax=0,totLiq=0,anyVal=false;
+  let totCtv=0, anyVal=false;
   (tit||[]).forEach(p=>{
     const key=p.isin||p.titolo;
     const esc=CSS.escape(key);
     const ctvEl=document.getElementById('pc-ctv-'+esc);
-    const plEl =document.getElementById('pc-pl-' +esc);
-    const taxEl=document.getElementById('pc-tax-'+esc);
-    const liqEl=document.getElementById('pc-liq-'+esc);
     if(ctvEl&&ctvEl.textContent!=='—'){
       anyVal=true;
       const parse=s=>parseFloat(s.replace(/[€\s.]/g,'').replace(',','.'))||0;
       totCtv+=parse(ctvEl.textContent);
-      totPl +=parse(plEl?.textContent||'0');
-      totTax+=parse(taxEl?.textContent||'0');
-      totLiq+=parse(liqEl?.textContent||'0');
     }
   });
-  const set=(id,val,cls)=>{
-    const el=document.getElementById(id);
-    if(!el)return;
-    el.textContent=anyVal?E(val):'—';
-    if(cls) el.style.color=val>=0?'var(--green)':'var(--red)';
-  };
-  set('tot-ctv',totCtv);
-  set('tot-pl', totPl, true);
-  set('tot-tax',totTax,true);
-  const liqEl=document.getElementById('tot-liq');
-  if(liqEl){
-    liqEl.textContent=anyVal?E(totLiq):'—';
-    liqEl.style.color=anyVal?(totLiq>=0?'var(--green)':'var(--red)'):'var(--text3)';
+  const el=document.getElementById('tot-ctv');
+  if(el){
+    el.textContent=anyVal?E(totCtv):'—';
+    el.style.color='var(--gold)';
   }
 }
 
@@ -1803,32 +1787,26 @@ function recalcPortRow(key){
   const port=getPort();
   const p=port[key];if(!p||p.qty<=0)return;
   const pp=portPrices[key]&&typeof portPrices[key]==='object'&&!Array.isArray(portPrices[key])
-    ? portPrices[key]
-    : {prez:''};
+    ? portPrices[key] : {prez:''};
   const prez=pp.prez===''||pp.prez===null||pp.prez===undefined?null:+pp.prez;
   const comm=getGlobalComm();
   const esc=CSS.escape(key);
 
-  const set=(id,html,cls)=>{
-    const el=document.getElementById(id);
-    if(el){el.innerHTML=html;if(cls)el.className='td-calc '+cls;}
-  };
+  const ctvEl=document.getElementById('pc-ctv-'+esc);
+  if(!ctvEl) return;
 
   if(prez===null){
-    set('pc-ctv-'+esc,'—');set('pc-pl-'+esc,'—');
-    set('pc-tax-'+esc,'—');set('pc-liq-'+esc,'—');
+    ctvEl.textContent='—'; ctvEl.className='td-calc';
     return;
   }
 
-  const ctv  = prez * p.qty;
-  const pl   = ctv - p.costoFiscale - comm;  // P/L fiscale: esclude Tobin Tax
-  const tax  = pl * 0.26;                     // imposte latenti (neg = credito fiscale)
-  const liq  = ctv - tax - comm;             // valore liquidazione
+  const ctv   = prez * p.qty;
+  const pl    = ctv - p.costoFiscale - comm;
+  const tax   = pl * 0.26;
+  const liq   = ctv - tax - comm;
 
-  set('pc-ctv-'+esc, E(ctv), 'gold');
-  set('pc-pl-'+esc,  E(pl),  pl>=0?'pos':'neg');
-  set('pc-tax-'+esc, E(tax), tax>0?'neg':tax<0?'pos':'muted');
-  set('pc-liq-'+esc, E(liq), liq>=0?'pos':'neg');
+  ctvEl.textContent = E(ctv);
+  ctvEl.className   = 'td-calc gold';
 }
 
 function updDashKPI(){
@@ -2015,7 +1993,7 @@ function updDash(){
   const tit=orderedKeys.map(k=>allTit.find(p=>(p.isin||p.titolo)===k)).filter(Boolean);
 
   if(!tit.length){
-    tb.innerHTML=`<tr><td colspan="8" class="empty">Nessuna posizione${isFiltered?' per il filtro selezionato':' aperta'}</td></tr>`;
+    tb.innerHTML=`<tr><td colspan="6" class="empty">Nessuna posizione${isFiltered?' per il filtro selezionato':' aperta'}</td></tr>`;
   } else {
     tb.innerHTML=tit.map(p=>{
       const key=p.isin||p.titolo;
@@ -2056,16 +2034,11 @@ function updDash(){
         <td class="td-n">${p.titolo}</td>
         <td class="gold">${E(p.costo)}</td>
         <td>
-          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;">
-            <span style="font-family:var(--mono);font-size:13px;color:var(--text);">${prezVal!==''?E(+prezVal,4):'—'}</span>
-            ${varBadge}
-          </div>
+          <span style="font-family:var(--mono);font-size:13px;color:var(--text);">${prezVal!==''?E(+prezVal,4):'—'}</span>
           ${updStr}
         </td>
+        <td>${varBadge||'<span style="color:var(--text3);font-size:11px;">—</span>'}</td>
         <td class="td-calc" id="pc-ctv-${esc}">—</td>
-        <td class="td-calc" id="pc-pl-${esc}">—</td>
-        <td class="td-calc" id="pc-tax-${esc}">—</td>
-        <td class="td-calc" id="pc-liq-${esc}">—</td>
       </tr>`;
     }).join('');
     tit.forEach(p=>recalcPortRow(p.isin||p.titolo));
@@ -2081,10 +2054,8 @@ function updDash(){
       <td style="font-family:var(--mono);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">Totale portafoglio</td>
       <td style="font-family:var(--mono);font-size:12px;color:var(--gold);font-weight:600;">${E(totCosto)}</td>
       <td></td>
-      <td id="tot-ctv" style="font-family:var(--mono);font-size:12px;color:var(--gold);font-weight:600;">—</td>
-      <td id="tot-pl"  style="font-family:var(--mono);font-size:12px;font-weight:600;">—</td>
-      <td id="tot-tax" style="font-family:var(--mono);font-size:12px;font-weight:600;">—</td>
-      <td id="tot-liq" style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--green);">—</td>
+      <td></td>
+      <td id="tot-ctv" style="font-family:var(--mono);font-size:13px;color:var(--gold);font-weight:700;">—</td>
     `;
     tb.appendChild(totRow);
     setTimeout(()=>aggiornaRigaTotale(tit),50);
