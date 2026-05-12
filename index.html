@@ -651,7 +651,10 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
 
       <!-- LISTA DOSSIER -->
       <div class="card">
-        <div class="ch"><div class="ch-left"><div class="ch-ico">⬡</div><div class="ch-title">I tuoi dossier</div></div></div>
+        <div class="ch">
+          <div class="ch-left"><div class="ch-ico">⬡</div><div class="ch-title">I tuoi dossier</div></div>
+          <button class="btn-ghost" onclick="openSpostaMovimenti()" style="font-size:11px;padding:5px 12px;">⇄ Sposta movimenti</button>
+        </div>
         <div id="dossier-list" style="display:flex;flex-direction:column;gap:10px;"></div>
       </div>
     </div>
@@ -1176,16 +1179,96 @@ function delDossier(id){
 
 function editDossier(id){
   const d=dos.find(x=>x.id===id);if(!d)return;
-  const nuovoNome=prompt('Nuovo nome dossier:',d.nome);
-  if(!nuovoNome||!nuovoNome.trim())return;
-  d.nome=nuovoNome.trim();
+  // Usa il modal generico di modifica
+  const body=`<div class="fg">
+    <div class="fgroup full"><label class="fl">Nome dossier</label><input type="text" id="em-dos-nome" value="${d.nome}"></div>
+    <div class="fgroup">
+      <label class="fl">Colore</label>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input type="color" id="em-dos-colore" value="${d.colore}" style="width:42px;height:34px;border:1px solid var(--border);border-radius:6px;background:transparent;cursor:pointer;padding:2px;">
+        <div id="em-dos-preview" style="font-family:var(--mono);font-size:12px;color:var(--text2);">${d.colore}</div>
+      </div>
+    </div>
+  </div>`;
+  openEdit('Modifica <em>Dossier</em>','// '+d.nome,body,{type:'dossier',id});
+  setTimeout(()=>{
+    const col=document.getElementById('em-dos-colore');
+    const prev=document.getElementById('em-dos-preview');
+    if(col&&prev) col.addEventListener('input',()=>prev.textContent=col.value);
+  },50);
+}
+
+function saveEditDossier(id){
+  const d=dos.find(x=>x.id===id);if(!d)return;
+  const nome=document.getElementById('em-dos-nome')?.value.trim();
+  const colore=document.getElementById('em-dos-colore')?.value||d.colore;
+  if(!nome){toast('Il nome è obbligatorio',true);return;}
+  d.nome=nome; d.colore=colore;
   saveDos();
   rendDossier();
   fillDossierSelects();
   buildFilterChips();
   cUpsert('dossier',d);
+  closeEdit();
   toast('Dossier aggiornato ✓');
 }
+
+/* ── SPOSTA MOVIMENTI TRA DOSSIER ── */
+function openSpostaMovimenti(){
+  if(!dos.length){toast('Nessun dossier disponibile',true);return;}
+
+  const allMov=[
+    ...acq.map(r=>({...r,_tipo:'acquisto',_label:`${r.data} · Acquisto ${r.titolo} (${r.qty}x)`})),
+    ...ced.map(r=>({...r,_tipo:'cedola',_label:`${r.data} · Cedola ${r.titolo}`})),
+    ...ven.map(r=>({...r,_tipo:'vendita',_label:`${r.data} · Vendita ${r.titolo}`})),
+    ...cos.map(r=>({...r,_tipo:'costo',_label:`${r.data} · Costo ${r.descrizione||''}`})),
+  ].sort((a,b)=>a.data<b.data?1:-1);
+
+  const dosOpts=dos.map(d=>`<option value="${d.id}">${d.nome}</option>`).join('');
+  const movRows=allMov.map(r=>{
+    const cur=r.dossier_id?dos.find(d=>String(d.id)===String(r.dossier_id))?.nome:'—';
+    const bStyle=`background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:11px;padding:4px 8px;`;
+    return `<tr>
+      <td class="muted" style="font-size:11px;white-space:nowrap;">${r.data}</td>
+      <td style="font-size:11px;">${r._tipo}</td>
+      <td class="td-n" style="font-size:12px;">${r.titolo||r.descrizione||''}</td>
+      <td class="muted" style="font-size:11px;">${cur}</td>
+      <td><select style="${bStyle}" onchange="assegnaDossier('${r._tipo}',${r.id},this.value)">${dosOpts}</select></td>
+    </tr>`;
+  }).join('');
+
+  const body=`
+    <div style="font-family:var(--mono);font-size:11px;color:var(--text2);margin-bottom:12px;">
+      Seleziona il dossier di destinazione per ciascun movimento.
+    </div>
+    <div style="max-height:420px;overflow-y:auto;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr>
+          <th style="font-family:var(--mono);font-size:10px;color:var(--text2);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);">Data</th>
+          <th style="font-family:var(--mono);font-size:10px;color:var(--text2);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);">Tipo</th>
+          <th style="font-family:var(--mono);font-size:10px;color:var(--text2);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);">Titolo</th>
+          <th style="font-family:var(--mono);font-size:10px;color:var(--text2);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);">Dossier attuale</th>
+          <th style="font-family:var(--mono);font-size:10px;color:var(--text2);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);">Assegna a</th>
+        </tr></thead>
+        <tbody>${movRows}</tbody>
+      </table>
+    </div>`;
+
+  openEdit('Sposta <em>Movimenti</em>','// assegna i movimenti ai dossier',body,{type:'sposta',id:0});
+}
+
+function assegnaDossier(tipo,id,dosId){
+  dosId=parseInt(dosId);
+  const map={acquisto:[acq,'acquisti'],cedola:[ced,'cedole'],vendita:[ven,'vendite'],costo:[cos,'costi']};
+  const [arr,table]=map[tipo]||[];
+  if(!arr)return;
+  const rec=arr.find(r=>r.id===id);
+  if(!rec)return;
+  rec.dossier_id=dosId;
+  save();
+  cUpsert(table,rec);
+}
+
 
 // Aggiorna preview colore
 document.addEventListener('DOMContentLoaded',()=>{
@@ -1750,6 +1833,8 @@ function saveEdit(){
   else if(_editCtx.type==='ced') saveEditCed(_editCtx.id);
   else if(_editCtx.type==='ven') saveEditVen(_editCtx.id);
   else if(_editCtx.type==='ana') saveEditAna(_editCtx.id);
+  else if(_editCtx.type==='dossier') saveEditDossier(_editCtx.id);
+  else if(_editCtx.type==='sposta') closeEdit(); // nessun save unico, ogni riga salva autonomamente
 }
 
 /* ══ COSTI ══ */
