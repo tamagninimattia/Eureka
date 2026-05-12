@@ -2024,10 +2024,27 @@ function updDash(){
       const venT=filteredVen.filter(v=>v.isin===key).reduce((s,v)=>s+v.net,0);
       const pp=portPrices[key]&&typeof portPrices[key]==='object'&&!Array.isArray(portPrices[key])
         ? portPrices[key]
-        : {prez:'',comm:19,updatedAt:null};
+        : {prez:'',updatedAt:null};
       const prezVal = pp.prez===''||pp.prez===null||pp.prez===undefined ? '' : pp.prez;
-      const commVal = pp.comm===''||pp.comm===null||pp.comm===undefined ? 19  : pp.comm;
+      const change  = pp.change??null;
+      const changePct = pp.changePct??null;
       const esc=CSS.escape(key);
+
+      // Badge variazione
+      let varBadge='';
+      if(prezVal!==''&&change!==null){
+        const isPos=change>=0;
+        const sign=isPos?'+':'';
+        varBadge=`<span style="
+          font-family:var(--mono);font-size:10px;font-weight:600;
+          color:${isPos?'var(--green)':'var(--red)'};
+          background:${isPos?'rgba(52,201,126,0.1)':'rgba(224,84,112,0.1)'};
+          border-radius:4px;padding:2px 6px;margin-left:6px;white-space:nowrap;">
+          ${sign}${change.toFixed(2)} (${sign}${changePct!==null?changePct.toFixed(2):'?'}%)
+        </span>`;
+      }
+      const updStr=pp.updatedAt?`<div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:2px;">${new Date(pp.updatedAt).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>`:'';
+
       return `<tr id="port-row-${esc}" draggable="true" data-key="${key}" class="port-detail-row"
           ondragstart="onPortDragStart(event)"
           ondragover="onPortDragOver(event)"
@@ -2037,10 +2054,12 @@ function updDash(){
         <td><span class="drag-handle" title="Trascina per riordinare">⠿</span></td>
         <td class="td-n">${p.titolo}</td>
         <td class="gold">${E(p.costo)}</td>
-        <td><input class="td-input" type="number" step="0.0001" placeholder="—"
-          value="${prezVal}" oninput="updPortPrice('${key}','prez',this.value)"
-          title="Prezzo unitario attuale">
-          ${pp.updatedAt?`<div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:3px">${new Date(pp.updatedAt).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>`:''}
+        <td>
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;">
+            <span style="font-family:var(--mono);font-size:13px;color:var(--text);">${prezVal!==''?E(+prezVal,4):'—'}</span>
+            ${varBadge}
+          </div>
+          ${updStr}
         </td>
         <td class="td-calc" id="pc-ctv-${esc}">—</td>
         <td class="td-calc" id="pc-pl-${esc}">—</td>
@@ -2574,11 +2593,16 @@ async function fetchPricesFromFinnhub(){
 
     let ok=0,errTickers=[];
     for(const p of entries){
-      const price=results[p.ticker];
+      const data=results[p.ticker];
+      const price=typeof data==='object'?data?.price:data;
+      const change=typeof data==='object'?(data?.change??null):null;
+      const changePct=typeof data==='object'?(data?.changePct??null):null;
       if(price&&price>0){
         const key=p.isin||p.titolo;
         if(!portPrices[key]) portPrices[key]={};
         portPrices[key].prez=price;
+        portPrices[key].change=change;
+        portPrices[key].changePct=changePct;
         portPrices[key].updatedAt=new Date().toISOString();
         DB.set('portPrices',portPrices);
         await cSavePrice(key,price);
