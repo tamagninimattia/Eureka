@@ -1218,29 +1218,41 @@ function openSpostaMovimenti(){
   if(!dos.length){toast('Nessun dossier disponibile',true);return;}
 
   const allMov=[
-    ...acq.map(r=>({...r,_tipo:'acquisto',_label:`${r.data} · Acquisto ${r.titolo} (${r.qty}x)`})),
-    ...ced.map(r=>({...r,_tipo:'cedola',_label:`${r.data} · Cedola ${r.titolo}`})),
-    ...ven.map(r=>({...r,_tipo:'vendita',_label:`${r.data} · Vendita ${r.titolo}`})),
-    ...cos.map(r=>({...r,_tipo:'costo',_label:`${r.data} · Costo ${r.descrizione||''}`})),
+    ...acq.map(r=>({...r,_tipo:'acquisto'})),
+    ...ced.map(r=>({...r,_tipo:'cedola'})),
+    ...ven.map(r=>({...r,_tipo:'vendita'})),
+    ...cos.map(r=>({...r,_tipo:'costo'})),
   ].sort((a,b)=>a.data<b.data?1:-1);
 
+  const senzaDossier=allMov.filter(r=>!r.dossier_id).length;
   const dosOpts=dos.map(d=>`<option value="${d.id}">${d.nome}</option>`).join('');
+  const bStyle=`background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:11px;padding:4px 8px;`;
+
   const movRows=allMov.map(r=>{
-    const cur=r.dossier_id?dos.find(d=>String(d.id)===String(r.dossier_id))?.nome:'—';
-    const bStyle=`background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:11px;padding:4px 8px;`;
+    const cur=r.dossier_id
+      ? dos.find(d=>String(d.id)===String(r.dossier_id))?.nome||'—'
+      : '<span style="color:var(--red);font-weight:600;">Non assegnato</span>';
     return `<tr>
       <td class="muted" style="font-size:11px;white-space:nowrap;">${r.data}</td>
       <td style="font-size:11px;">${r._tipo}</td>
       <td class="td-n" style="font-size:12px;">${r.titolo||r.descrizione||''}</td>
-      <td class="muted" style="font-size:11px;">${cur}</td>
-      <td><select style="${bStyle}" onchange="assegnaDossier('${r._tipo}',${r.id},this.value)">${dosOpts}</select></td>
+      <td data-mov-id="${r._tipo}-${r.id}" style="font-size:11px;">${cur}</td>
+      <td>
+        <select style="${bStyle}" onchange="assegnaDossier('${r._tipo}',${r.id},this.value)">
+          <option value="">— scegli —</option>
+          ${dosOpts}
+        </select>
+      </td>
     </tr>`;
   }).join('');
 
-  const body=`
-    <div style="font-family:var(--mono);font-size:11px;color:var(--text2);margin-bottom:12px;">
-      Seleziona il dossier di destinazione per ciascun movimento.
-    </div>
+  const alertBanner=senzaDossier>0?`
+    <div style="background:rgba(224,84,112,0.08);border:1px solid rgba(224,84,112,0.2);border-radius:8px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <span style="font-family:var(--mono);font-size:11px;color:var(--red);">⚠ ${senzaDossier} movimenti senza dossier</span>
+      <button class="btn" style="font-size:11px;padding:6px 14px;" onclick="assegnaDefaultDossier()">Assegna tutti a "${dos[0].nome}"</button>
+    </div>`:'';
+
+  const body=`${alertBanner}
     <div style="max-height:420px;overflow-y:auto;">
       <table style="width:100%;border-collapse:collapse;">
         <thead><tr>
@@ -1266,7 +1278,39 @@ function assegnaDossier(tipo,id,dosId){
   if(!rec)return;
   rec.dossier_id=dosId;
   save();
-  cUpsert(table,rec);
+  // Aggiorna su Supabase con PATCH diretto per id
+  if(SB_TOKEN&&SB_UID){
+    sbQ(`${table}?id=eq.${id}&user_id=eq.${SB_UID}`,{
+      method:'PATCH',
+      body:JSON.stringify({dossier_id:dosId})
+    }).catch(e=>console.warn('patch dossier_id',e));
+  }
+  // Aggiorna il testo del dossier attuale nella riga
+  const dosNome=dos.find(d=>d.id===dosId)?.nome||'—';
+  const cells=document.querySelectorAll(`[data-mov-id="${tipo}-${id}"]`);
+  cells.forEach(c=>c.textContent=dosNome);
+}
+
+async function assegnaDefaultDossier(){
+  if(!dos.length){toast('Nessun dossier disponibile',true);return;}
+  const defaultId=dos[0].id;
+  let count=0;
+  const tables={acquisto:[acq,'acquisti'],cedola:[ced,'cedole'],vendita:[ven,'vendite'],costo:[cos,'costi']};
+  for(const[tipo,[arr,table]] of Object.entries(tables)){
+    const senzaDossier=arr.filter(r=>!r.dossier_id);
+    senzaDossier.forEach(r=>{ r.dossier_id=defaultId; count++; });
+    if(senzaDossier.length&&SB_TOKEN&&SB_UID){
+      // PATCH tutti in bulk
+      await sbQ(`${table}?user_id=eq.${SB_UID}&dossier_id=is.null`,{
+        method:'PATCH',
+        body:JSON.stringify({dossier_id:defaultId})
+      }).catch(e=>console.warn('bulk patch',e));
+    }
+  }
+  save();
+  rendDossier();
+  openSpostaMovimenti(); // riapri il modal aggiornato
+  toast(`${count} movimenti assegnati al dossier "${dos[0].nome}" ✓`);
 }
 
 
