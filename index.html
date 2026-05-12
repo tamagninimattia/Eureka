@@ -1797,7 +1797,7 @@ function verificaProvvisorie(){
 
 function rendCed(){
   const tb=document.getElementById('tb-ced');
-  if(!ced.length){tb.innerHTML='<tr><td colspan="11" class="empty">Nessuna cedola registrata</td></tr>';return;}
+  if(!ced.length){tb.innerHTML='<tr><td colspan="10" class="empty">Nessuna cedola registrata</td></tr>';return;}
   tb.innerHTML=ced.slice().reverse().map(c=>{
     const isProv=c.provvisoria;
     const rowStyle=isProv?'background:rgba(212,168,83,0.06);':'';
@@ -1812,7 +1812,6 @@ function rendCed(){
       <td class="neg">${E(c.tax)}</td>
       <td class="${isProv?'':'pos'}" style="${isProv?'color:var(--gold);opacity:0.7;':''}">${E(c.netto)}</td>
       <td style="white-space:nowrap">
-        ${isProv?`<button class="btn-ghost" style="font-size:10px;padding:4px 8px;" onclick="confermaProvvisoria(${c.id})">✓ Conferma</button>`:''}
         <button class="btn-edit" onclick="editCed(${c.id})">✎</button>
         <button class="btn-del" onclick="delCed(${c.id})">✕</button>
       </td>
@@ -2365,7 +2364,7 @@ function updDashKPI(){
   const filteredISIN=Object.keys(port).filter(filterKey);
   const filteredAcq=acq.filter(a=>filterKey(a.isin||a.titolo));
   const filteredVen=ven.filter(v=>filterKey(v.isin||v.titolo));
-  const filteredCed=ced.filter(c=>filterKey(c.isin||c.titolo));
+  const filteredCed=ced.filter(c=>filterKey(c.isin||c.titolo)&&!c.provvisoria);
 
   // Leggi toggle dalla filter bar
   const inclComm    = document.getElementById('tog-comm')?.checked!==false;
@@ -2476,7 +2475,7 @@ function updDashKPI(){
   setHeroCell('cell-pl-vendite','label-pl-vendite','m-pl-vendite',plVenNetto,true);
 
   // Cedole totali → metric cell
-  const filteredCedAll=ced.filter(c=>filterKey(c.isin||c.titolo));
+  const filteredCedAll=ced.filter(c=>filterKey(c.isin||c.titolo)&&!c.provvisoria);
   const totCedDisp=filteredCedAll.reduce((s,c)=>s+c.netto,0);
   const cedEl=document.getElementById('m-cedole-tot');
   if(cedEl){cedEl.textContent=E(totCedDisp);cedEl.style.color=totCedDisp>=0?'var(--green)':'var(--red)';}
@@ -2515,7 +2514,7 @@ function updDash(){
   const filteredISIN=allISIN.filter(filterKey);
   const filteredAcq=acq.filter(a=>filterKey(a.isin||a.titolo));
   const filteredVen=ven.filter(v=>filterKey(v.isin||v.titolo));
-  const filteredCed=ced.filter(c=>filterKey(c.isin||c.titolo));
+  const filteredCed=ced.filter(c=>filterKey(c.isin||c.titolo)&&!c.provvisoria);
 
   // Filtro attivo label
   const isFiltered=fType!=='all'||fSector!=='all'||fTitolo!==''||fDossier!=='all';
@@ -2636,17 +2635,18 @@ function updDash(){
       <td class="neg">${E(v.tax)}</td><td class="${v.net>=0?'pos':'neg'}">${E(v.net)}</td>
     </tr>`).join('');
 
-  // Cedole (provvisorie in oro)
+  // Cedole storico: mostra tutte (incluse provvisorie) ma i totali usano solo quelle confermate
   const tbc=document.getElementById('tb-ced-r');
-  tbc.innerHTML=!filteredCed.length?'<tr><td colspan="4" class="empty">Nessuna cedola'+(isFiltered?' per il filtro selezionato':'')+'</td></tr>':
-    filteredCed.slice().reverse().map(c=>{
+  const allCedFilt=ced.filter(c=>filterKey(c.isin||c.titolo));
+  tbc.innerHTML=!allCedFilt.length?'<tr><td colspan="4" class="empty">Nessuna cedola'+(isFiltered?' per il filtro selezionato':'')+'</td></tr>':
+    allCedFilt.slice().reverse().map(c=>{
       const isProv=c.provvisoria;
       const badge=isProv?`<span style="font-family:var(--mono);font-size:9px;background:rgba(212,168,83,0.15);color:var(--gold);border-radius:3px;padding:1px 5px;margin-left:4px;">ATTESA</span>`:'';
       return `<tr style="${isProv?'background:rgba(212,168,83,0.04);':''}">
         <td class="muted">${c.data}</td>
         <td class="td-n">${c.titolo}${badge}</td>
         <td>${tipoBadge(c.tipo)}</td>
-        <td style="${isProv?'color:var(--gold);':'color:var(--green);'}">${E(c.netto)}</td>
+        <td style="${isProv?'color:var(--gold);font-style:italic;':'color:var(--green);'}">${E(c.netto)}</td>
       </tr>`;
     }).join('');
 
