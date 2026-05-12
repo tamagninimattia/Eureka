@@ -1152,7 +1152,7 @@ function countDossierMovimenti(id){
   return [acq,ced,ven,cos].flat().filter(r=>r.dossier_id==id).length;
 }
 
-function addDossier(){
+async function addDossier(){
   const nome=document.getElementById('dos-nome').value.trim();
   const colore=document.getElementById('dos-colore').value||'#d4a853';
   if(!nome){toast('Inserisci un nome per il dossier',true);return;}
@@ -1164,7 +1164,8 @@ function addDossier(){
   buildFilterChips();
   document.getElementById('dos-nome').value='';
   // Sync cloud
-  cUpsert('dossier',nd);
+  await cUpsertDossier(nd);
+  saveDos(); // salva di nuovo con l'id cloud aggiornato
   toast('Dossier creato ✓');
 }
 
@@ -1212,7 +1213,13 @@ function saveEditDossier(id){
   rendDossier();
   fillDossierSelects();
   buildFilterChips();
-  cUpsert('dossier',d);
+  // Sync cloud con PATCH diretto per id cloud
+  if(SB_TOKEN&&SB_UID){
+    sbQ(`dossier?user_id=eq.${SB_UID}&id=eq.${d.id}`,{
+      method:'PATCH',
+      body:JSON.stringify({nome:d.nome,colore:d.colore})
+    }).catch(e=>console.warn('patch dossier',e));
+  }
   closeEdit();
   toast('Dossier aggiornato ✓');
 }
@@ -1325,7 +1332,25 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(col&&prev) col.addEventListener('input',()=>{ prev.textContent=col.value; });
 });
 
-/* ── DOSSIER IN filterKey ── */
+/* ── DOSSIER CLOUD SYNC ── */
+async function cUpsertDossier(d){
+  if(!SB_TOKEN||!SB_UID) return;
+  try{
+    // Se ha un id numerico piccolo (locale), cerca se esiste già su cloud per nome
+    const ex=await sbQ(`dossier?user_id=eq.${SB_UID}&nome=eq.${encodeURIComponent(d.nome)}`);
+    if(ex.length){
+      // Aggiorna colore
+      await sbQ(`dossier?id=eq.${ex[0].id}`,{method:'PATCH',body:JSON.stringify({colore:d.colore,nome:d.nome})});
+      // Aggiorna id locale con quello cloud
+      d.id=ex[0].id;
+    } else {
+      const res=await sbQ('dossier',{method:'POST',body:JSON.stringify({nome:d.nome,colore:d.colore,user_id:SB_UID}),prefer:'return=representation'});
+      const created=Array.isArray(res)?res[0]:res;
+      if(created?.id) d.id=created.id;
+    }
+    saveDos();
+  }catch(e){console.warn('cUpsertDossier',e);}
+}
 
 function getPort(){
   const t={};
@@ -2786,12 +2811,16 @@ async function cloudPull(){
   }
   // Carica dossier
   const dosRows=await sbQ(`dossier?user_id=eq.${SB_UID}&order=id.asc`);
-  dos=dosRows.map(({user_id,...r})=>r);
-  // Se nessun dossier, crea il principale
-  if(!dos.length){
+  if(dosRows.length){
+    dos=dosRows.map(({user_id,...r})=>r);
+    DB.set('dossier',dos);
+  } else {
+    // Nessun dossier su cloud: crea il principale
     const nd={nome:'Dossier principale',colore:'#d4a853',user_id:SB_UID};
     const res=await sbQ('dossier',{method:'POST',body:JSON.stringify(nd),prefer:'return=representation'});
-    dos=[{...(Array.isArray(res)?res[0]:res),user_id:undefined}].map(({user_id,...r})=>r);
+    const created=Array.isArray(res)?res[0]:res;
+    dos=created?[{id:created.id,nome:created.nome,colore:created.colore}]:
+                [{id:Date.now(),nome:'Dossier principale',colore:'#d4a853'}];
     DB.set('dossier',dos);
   }
   // prezzi
