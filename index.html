@@ -1656,8 +1656,10 @@ function addAcq(){
   const comm=parseFloat(document.getElementById('a-comm').value)||0;
   const dossier_id=parseInt(document.getElementById('a-dossier')?.value)||dos[0]?.id||null;
   if(!titolo||isNaN(prezzo)||isNaN(qty)||qty<=0){toast('Compila i campi obbligatori (titolo, prezzo, qtà)',true);return;}
-  acq.push({id:Date.now(),data,titolo,isin,ticker,tipo,settore,prezzo,qty,tobin,comm,dossier_id});
-  save();rendAcq();toast('Acquisto registrato ✓');
+  const rec={id:Date.now(),data,titolo,isin,ticker,tipo,settore,prezzo,qty,tobin,comm,dossier_id};
+  acq.push(rec);save();rendAcq();
+  cUpsert('acquisti',rec);
+  toast('Acquisto registrato ✓');
   ['a-titolo','a-isin','a-ticker','a-prezzo','a-qty','a-tobin','a-comm'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('a-tipo').value='';document.getElementById('a-settore').value='';
 }
@@ -1774,18 +1776,13 @@ function addCed(){
 function verificaProvvisorie(){
   const oggi=today();
   const port=getPort();
-  console.log('[verificaProvvisorie] acq.length:', acq.length);
-  console.log('[verificaProvvisorie] ced provvisorie:', ced.filter(c=>c.provvisoria).map(c=>({id:c.id,titolo:c.titolo,data:c.data,provvisoria:c.provvisoria})));
-  console.log('[verificaProvvisorie] oggi:', oggi);
-  console.log('[verificaProvvisorie] port keys:', Object.keys(port));
-  if(!acq.length){ console.log('[verificaProvvisorie] SKIP: no acquisti'); return; }
+  if(!acq.length) return;
   let aggiornate=0;
   ced.forEach(c=>{
-    if(!c.provvisoria){ return; }
-    if(c.data>oggi){ console.log('[verificaProvvisorie] SKIP futuro:', c.titolo, c.data); return; }
+    if(!c.provvisoria) return;
+    if(c.data>oggi) return;
     const qtyReale=port[c.isin]?.qty||0;
-    if(!qtyReale){ console.log('[verificaProvvisorie] SKIP qty=0:', c.titolo, c.isin); return; }
-    console.log('[verificaProvvisorie] CONFERMO:', c.titolo, 'qty:', qtyReale);
+    if(!qtyReale) return;
     c.qty=qtyReale;
     c.lordo=+(c.unit*qtyReale).toFixed(4);
     c.tax=+(c.lordo*0.26).toFixed(4);
@@ -1888,7 +1885,9 @@ function addVen(){
   if(pl>0&&minus>0){mc=Math.min(minus,pl);bi=pl-mc;}
   const tax=bi>0?bi*0.26:0,net=ric-tax;
   ven.push({id:Date.now(),data,isin,titolo,tipo,qty,prez,comm,pmc,pl,mc,tax,net,dossier_id});
-  save();rendVen();updMinus();toast('Vendita registrata ✓');
+  save();rendVen();updMinus();
+  cUpsert('vendite',ven[ven.length-1]);
+  toast('Vendita registrata ✓');
   ['v-qty','v-prez','v-comm','v-pmc'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('v-tit').value='';
   document.getElementById('v-rbox').style.display='none';
@@ -2124,8 +2123,10 @@ function addCos(){
   const imp=parseFloat(document.getElementById('k-imp').value);
   const dossier_id=parseInt(document.getElementById('k-dossier')?.value)||dos[0]?.id||null;
   if(!descrizione||isNaN(imp)){toast('Compila tutti i campi',true);return;}
-  cos.push({id:Date.now(),data,tipo,descrizione,imp,dossier_id});
-  save();rendCos();toast('Costo registrato ✓');
+  const recK={id:Date.now(),data,tipo,descrizione,imp,dossier_id};
+  cos.push(recK);save();rendCos();
+  cUpsert('costi',recK);
+  toast('Costo registrato ✓');
   ['k-desc','k-imp'].forEach(id=>document.getElementById(id).value='');
 }
 function rendCos(){
@@ -3108,45 +3109,6 @@ async function cSavePrice(key,prez){
   }catch(e){console.warn('price',e);}
 }
 
-/* ── PATCH CRUD per sync automatico ── */
-const _addAcqOrig=addAcq, _delAcqOrig=delAcq;
-const _addCedOrig=addCed, _delCedOrig=delCed;
-const _addVenOrig=addVen, _delVenOrig=delVen;
-const _addCosOrig=addCos, _delCosOrig=delCos;
-const _addAnaOrig=addAnagrafica, _delAnaOrig=delAna;
-const _updPortOrig=updPortPrice;
-
-// Wrappa: dopo ogni operazione locale, sincronizza il record su cloud
-function _wrapAdd(origFn, table, getter){
-  return async function(){
-    const lenBefore=getter().length;
-    origFn.apply(this,arguments);
-    const arr=getter();
-    if(arr.length>lenBefore) await cUpsert(table,arr[arr.length-1]);
-  };
-}
-function _wrapDel(origFn, table){
-  return async function(id){
-    await cDelete(table,id);
-    origFn.apply(this,arguments);
-  };
-}
-
-// Sovrascrivere le funzioni globali dopo che sono definite
-window.addAcq=_wrapAdd(_addAcqOrig,'acquisti',()=>acq);
-window.delAcq=_wrapDel(_delAcqOrig,'acquisti');
-window.addCed=_wrapAdd(_addCedOrig,'cedole',()=>ced);
-window.delCed=_wrapDel(_delCedOrig,'cedole');
-window.addVen=_wrapAdd(_addVenOrig,'vendite',()=>ven);
-window.delVen=_wrapDel(_delVenOrig,'vendite');
-window.addCos=_wrapAdd(_addCosOrig,'costi',()=>cos);
-window.delCos=_wrapDel(_delCosOrig,'costi');
-window.addAnagrafica=_wrapAdd(_addAnaOrig,'anagrafica',()=>ana);
-window.delAna=_wrapDel(_delAnaOrig,'anagrafica');
-window.updPortPrice=async function(key,field,val){
-  _updPortOrig(key,field,val);
-  if(field==='prez'&&val!=='') await cSavePrice(key,parseFloat(val));
-};
 
 /* ── PREZZI VIA SUPABASE EDGE FUNCTION (Yahoo Finance proxy) ── */
 async function fetchPricesFromFinnhub(){
