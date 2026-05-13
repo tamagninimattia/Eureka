@@ -1694,7 +1694,7 @@ function rendAcq(){
     </td>
   </tr>`).join('');
 }
-function delAcq(id){if(!confirm('Eliminare questo acquisto?'))return;acq=acq.filter(a=>a.id!==id);save();rendAcq();toast('Eliminato');}
+function delAcq(id){if(!confirm('Eliminare questo acquisto?'))return;const r=acq.find(a=>a.id===id);acq=acq.filter(a=>a.id!==id);save();rendAcq();toast('Eliminato');if(r)cDelete('acquisti',id,r.sb_id);}
 
 /* ══ CEDOLE ══ */
 function updCedQty(){
@@ -1774,14 +1774,18 @@ function addCed(){
 function verificaProvvisorie(){
   const oggi=today();
   const port=getPort();
-  // Non eseguire se non ci sono acquisti caricati (portafoglio non ancora pronto)
-  if(!acq.length) return;
+  console.log('[verificaProvvisorie] acq.length:', acq.length);
+  console.log('[verificaProvvisorie] ced provvisorie:', ced.filter(c=>c.provvisoria).map(c=>({id:c.id,titolo:c.titolo,data:c.data,provvisoria:c.provvisoria})));
+  console.log('[verificaProvvisorie] oggi:', oggi);
+  console.log('[verificaProvvisorie] port keys:', Object.keys(port));
+  if(!acq.length){ console.log('[verificaProvvisorie] SKIP: no acquisti'); return; }
   let aggiornate=0;
   ced.forEach(c=>{
-    if(!c.provvisoria) return;
-    if(c.data>oggi) return; // stacco futuro: lascia provvisoria
+    if(!c.provvisoria){ return; }
+    if(c.data>oggi){ console.log('[verificaProvvisorie] SKIP futuro:', c.titolo, c.data); return; }
     const qtyReale=port[c.isin]?.qty||0;
-    if(!qtyReale) return; // qty non disponibile: lascia provvisoria
+    if(!qtyReale){ console.log('[verificaProvvisorie] SKIP qty=0:', c.titolo, c.isin); return; }
+    console.log('[verificaProvvisorie] CONFERMO:', c.titolo, 'qty:', qtyReale);
     c.qty=qtyReale;
     c.lordo=+(c.unit*qtyReale).toFixed(4);
     c.tax=+(c.lordo*0.26).toFixed(4);
@@ -1834,7 +1838,7 @@ function confermaProvvisoria(id){
   toast('Cedola confermata con '+N(qtyReale,0)+' quote ✓');
 }
 
-function delCed(id){if(!confirm('Eliminare?'))return;ced=ced.filter(c=>c.id!==id);save();rendCed();toast('Eliminata');}
+function delCed(id){if(!confirm('Eliminare?'))return;const r=ced.find(c=>c.id===id);ced=ced.filter(c=>c.id!==id);save();rendCed();toast('Eliminata');if(r)cDelete('cedole',id,r.sb_id);}
 
 /* ══ VENDITE ══ */
 function updMinus(){const el=document.getElementById('minus-res');if(el)el.textContent=E(getMinus());}
@@ -1921,7 +1925,7 @@ function rendVen(){
     </td>
   </tr>`).join('');
 }
-function delVen(id){if(!confirm('Eliminare?'))return;ven=ven.filter(v=>v.id!==id);save();rendVen();updMinus();toast('Eliminata');}
+function delVen(id){if(!confirm("Eliminare?"))return;const r=ven.find(v=>v.id===id);ven=ven.filter(v=>v.id!==id);save();rendVen();updMinus();toast("Eliminata");if(r)cDelete("vendite",id,r.sb_id);}
 
 /* ══ MODIFICA RECORD ══ */
 let _editCtx=null; // {type:'acq'|'ced'|'ven', id}
@@ -2135,7 +2139,7 @@ function rendCos(){
     <td><button class="btn-del" onclick="delCos(${k.id})">✕</button></td>
   </tr>`).join('');
 }
-function delCos(id){if(!confirm('Eliminare?'))return;cos=cos.filter(k=>k.id!==id);save();rendCos();toast('Eliminato');}
+function delCos(id){if(!confirm("Eliminare?"))return;const r=cos.find(k=>k.id===id);cos=cos.filter(k=>k.id!==id);save();rendCos();toast("Eliminato");if(r)cDelete("costi",id,r.sb_id);}
 
 /* ══ METRICHE AVANZATE ══ */
 
@@ -2949,8 +2953,10 @@ async function cloudPushAll(type){
       await sbQ(`${table}?user_id=eq.${SB_UID}`, {method:'DELETE'});
       // Reinserisce tutti i record
       if(arr.length){
-        const rows = arr.map(({id,...r})=>({...r, user_id:SB_UID}));
-        await sbQ(table, {method:'POST', body:JSON.stringify(rows), prefer:'return=minimal'});
+        const rows=arr.map(({id,sb_id,...r})=>({...r,user_id:SB_UID}));
+        const res=await sbQ(table,{method:'POST',body:JSON.stringify(rows),prefer:'return=representation'});
+        // Aggiorna sb_id nei record locali
+        if(Array.isArray(res)) res.forEach((r,i)=>{if(arr[i])arr[i].sb_id=r.id;});
       }
     }
     toast('Dati sincronizzati su cloud ✓');
@@ -3026,7 +3032,13 @@ function sbLogout(){
 
 /* ── CLOUD PULL ── */
 async function cloudPull(){
-  const tables={acquisti:d=>{acq=d;},cedole:d=>{ced=d.map(c=>({...c,provvisoria:c.provvisoria===true}));},vendite:d=>{ven=d;},costi:d=>{cos=d;},anagrafica:d=>{ana=d;}};
+  const tables={
+    acquisti:  d=>{acq=d.map(r=>({...r,sb_id:r.id,id:r.id}));},
+    cedole:    d=>{ced=d.map(r=>({...r,sb_id:r.id,id:r.id,provvisoria:r.provvisoria===true}));},
+    vendite:   d=>{ven=d.map(r=>({...r,sb_id:r.id,id:r.id}));},
+    costi:     d=>{cos=d.map(r=>({...r,sb_id:r.id,id:r.id}));},
+    anagrafica:d=>{ana=d.map(r=>({...r,sb_id:r.id,id:r.id}));}
+  };
   for(const[table,setter]of Object.entries(tables)){
     const rows=await sbQ(`${table}?user_id=eq.${SB_UID}&order=id.asc`);
     setter(rows.map(({user_id,...r})=>r));
@@ -3055,29 +3067,35 @@ async function cloudPull(){
 }
 
 /* ── CLOUD UPSERT / DELETE ── */
-async function cUpsert(table,record){
+async function cUpsert(table, record){
   if(!SB_TOKEN||!SB_UID) return;
   try{
-    // Prova prima PATCH se il record esiste già (più affidabile per campi booleani)
-    const existing=await sbQ(`${table}?id=eq.${record.id}&user_id=eq.${SB_UID}`);
-    if(existing.length){
-      const {id,...rest}=record;
-      await sbQ(`${table}?id=eq.${id}&user_id=eq.${SB_UID}`,{
+    // Se il record ha già un sb_id (id cloud) usa PATCH, altrimenti POST
+    if(record.sb_id){
+      const {sb_id,id,...rest}=record;
+      await sbQ(`${table}?id=eq.${sb_id}&user_id=eq.${SB_UID}`,{
         method:'PATCH',
         body:JSON.stringify({...rest,user_id:SB_UID})
       });
     } else {
-      await sbQ(table,{
+      // Nuovo record: non inviare l'id locale, lascia che Supabase generi il suo
+      const {id,...rest}=record;
+      const res=await sbQ(table,{
         method:'POST',
-        body:JSON.stringify({...record,user_id:SB_UID}),
-        prefer:'return=minimal'
+        body:JSON.stringify({...rest,user_id:SB_UID}),
+        prefer:'return=representation'
       });
+      // Salva il Supabase id nel record locale
+      const created=Array.isArray(res)?res[0]:res;
+      if(created?.id) record.sb_id=created.id;
+      save();
     }
-  }catch(e){console.warn('cUpsert',table,e);}
+  }catch(e){console.warn('cUpsert',table,e.message||e);}
 }
-async function cDelete(table,id){
+async function cDelete(table,id,sb_id){
   if(!SB_TOKEN)return;
-  try{await sbQ(`${table}?id=eq.${id}&user_id=eq.${SB_UID}`,{method:'DELETE'});}
+  const dbId=sb_id||id;
+  try{await sbQ(`${table}?id=eq.${dbId}&user_id=eq.${SB_UID}`,{method:'DELETE'});}
   catch(e){console.warn('delete',table,e);}
 }
 async function cSavePrice(key,prez){
