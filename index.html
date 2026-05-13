@@ -1024,7 +1024,7 @@ function updPortPrice(key,field,val){
 }
 
 /* ── UTILS ── */
-const N=(n,d=2)=>isNaN(n)||n==null?'—':new Intl.NumberFormat('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d}).format(n);
+const N=(n,d=2)=>isNaN(n)||n==null?'—':new Intl.NumberFormat('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d,useGrouping:true}).format(n);
 const E=(n,d=2)=>isNaN(n)||n==null?'—':'€\u202f'+N(n,d);
 const today=()=>new Date().toISOString().split('T')[0];
 let _tt;
