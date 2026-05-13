@@ -496,6 +496,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
             <th>Costo carico</th>
             <th>Prezzo attuale</th>
             <th>Variazione</th>
+            <th>Var. Ctv.</th>
             <th>Controvalore</th>
           </tr></thead>
           <tbody id="tb-port"></tbody>
@@ -2575,7 +2576,7 @@ function updDash(){
   const tit=orderedKeys.map(k=>allTit.find(p=>(p.isin||p.titolo)===k)).filter(Boolean);
 
   if(!tit.length){
-    tb.innerHTML=`<tr><td colspan="6" class="empty">Nessuna posizione${isFiltered?' per il filtro selezionato':' aperta'}</td></tr>`;
+    tb.innerHTML=`<tr><td colspan="7" class="empty">Nessuna posizione${isFiltered?' per il filtro selezionato':' aperta'}</td></tr>`;
   } else {
     tb.innerHTML=tit.map(p=>{
       const key=p.isin||p.titolo;
@@ -2606,6 +2607,23 @@ function updDash(){
       }
       const updStr=pp.updatedAt?`<div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:2px;">${new Date(pp.updatedAt).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>`:'';
 
+      // Calcola qty alla data dell'ultimo prezzo escludendo acquisti/vendite di quel giorno
+      const priceDate=pp.updatedAt?pp.updatedAt.slice(0,10):null;
+      const qtyAtPriceDate = priceDate
+        ? acq.filter(a=>(a.isin||a.titolo)===key && a.data<priceDate).reduce((s,a)=>s+(+a.qty||0),0)
+          - ven.filter(v=>(v.isin||v.titolo)===key && v.data<priceDate).reduce((s,v)=>s+(+v.qty||0),0)
+        : p.qty;
+      const varCtv = (prezVal!==''&&change!==null&&qtyAtPriceDate>0)
+        ? change * qtyAtPriceDate : null;
+      const varCtvBadge = varCtv!==null ? `<span style="
+        font-family:var(--mono);font-size:13px;font-weight:400;
+        color:${varCtv>=0?'var(--green)':'var(--red)'};
+        background:${varCtv>=0?'rgba(52,201,126,0.1)':'rgba(224,84,112,0.1)'};
+        border:1px solid ${varCtv>=0?'rgba(52,201,126,0.2)':'rgba(224,84,112,0.2)'};
+        border-radius:5px;padding:2px 7px;white-space:nowrap;">
+        ${varCtv>=0?'+':''}${E(varCtv)}
+      </span>` : '<span style="color:var(--text3);font-size:11px;">—</span>';
+
       return `<tr id="port-row-${esc}" draggable="true" data-key="${key}" class="port-detail-row"
           ondragstart="onPortDragStart(event)"
           ondragover="onPortDragOver(event)"
@@ -2623,6 +2641,7 @@ function updDash(){
           ${updStr}
         </td>
         <td>${varBadge||'<span style="color:var(--text3);font-size:11px;">—</span>'}</td>
+        <td>${varCtvBadge}</td>
         <td class="td-calc" id="pc-ctv-${esc}">—</td>
       </tr>`;
     }).join('');
@@ -2638,6 +2657,7 @@ function updDash(){
       <td></td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">Totale portafoglio</td>
       <td style="font-family:var(--mono);font-size:12px;color:var(--gold);font-weight:600;">${E(totCosto)}</td>
+      <td></td>
       <td></td>
       <td></td>
       <td id="tot-ctv" style="font-family:var(--mono);font-size:13px;color:var(--gold);font-weight:700;">—</td>
