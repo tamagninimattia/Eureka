@@ -1800,19 +1800,38 @@ function verificaProvvisorie(){
 function rendCed(){
   const tb=document.getElementById('tb-ced');
   if(!ced.length){tb.innerHTML='<tr><td colspan="10" class="empty">Nessuna cedola registrata</td></tr>';return;}
+  const port=getPort();
   tb.innerHTML=ced.slice().reverse().map(c=>{
     const isProv=c.provvisoria;
     const rowStyle=isProv?'background:rgba(212,168,83,0.06);':'';
     const badge=isProv?`<span style="font-family:var(--mono);font-size:9px;background:rgba(212,168,83,0.15);color:var(--gold);border-radius:3px;padding:1px 5px;margin-left:4px;">ATTESA</span>`:'';
+
+    // Per le provvisorie: calcola qty dinamicamente dal portafoglio nel dossier della cedola
+    let dispQty=c.qty, dispLordo=c.lordo, dispTax=c.tax, dispNetto=c.netto;
+    if(isProv){
+      // Calcola quantità in portafoglio per questo titolo in questo dossier
+      const qtyDossier = acq
+        .filter(a=>(a.isin||a.titolo)===c.isin && (!c.dossier_id||a.dossier_id==c.dossier_id))
+        .reduce((s,a)=>s+a.qty,0)
+        - ven
+        .filter(v=>(v.isin||v.titolo)===c.isin && (!c.dossier_id||v.dossier_id==c.dossier_id))
+        .reduce((s,v)=>s+v.qty,0);
+      dispQty=Math.max(0,qtyDossier)||c.qty;
+      dispLordo=+(c.unit*dispQty).toFixed(4);
+      dispTax=+(dispLordo*0.26).toFixed(4);
+      dispNetto=+(dispLordo-(c.comm||0)-dispTax).toFixed(4);
+    }
+
     return `<tr style="${rowStyle}">
       <td class="muted">${c.data}</td>
       <td class="muted">${c.dpag||'<span style="color:var(--text3)">—</span>'}</td>
       <td class="td-n">${c.titolo}${badge}</td>
-      <td>${E(c.unit,4)}</td><td>${N(c.qty,0)}</td>
-      <td style="${isProv?'color:var(--gold);opacity:0.7;':''}">${E(c.lordo)}</td>
+      <td>${E(c.unit,4)}</td>
+      <td style="${isProv?'color:var(--gold);':''}">${N(dispQty,0)}${isProv&&dispQty!==c.qty?`<span style="font-size:9px;color:var(--text3);margin-left:3px;">(era ${N(c.qty,0)})</span>`:''}</td>
+      <td style="${isProv?'color:var(--gold);opacity:0.8;':''}">${E(dispLordo)}</td>
       <td class="neg">${E(c.comm)}</td>
-      <td class="neg">${E(c.tax)}</td>
-      <td class="${isProv?'':'pos'}" style="${isProv?'color:var(--gold);opacity:0.7;':''}">${E(c.netto)}</td>
+      <td class="neg">${E(dispTax)}</td>
+      <td class="${isProv?'':'pos'}" style="${isProv?'color:var(--gold);opacity:0.8;':''}">${E(dispNetto)}</td>
       <td style="white-space:nowrap">
         <button class="btn-edit" onclick="editCed(${c.id})">✎</button>
         <button class="btn-del" onclick="delCed(${c.id})">✕</button>
