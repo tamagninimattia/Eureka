@@ -2664,12 +2664,13 @@ function updDash(){
   tbc.innerHTML=!allCedFilt.length?'<tr><td colspan="4" class="empty">Nessuna cedola'+(isFiltered?' per il filtro selezionato':'')+'</td></tr>':
     allCedFilt.slice().reverse().map(c=>{
       const isProv=c.provvisoria;
+      const d=getCedDisplay(c);
       const badge=isProv?`<span style="font-family:var(--mono);font-size:9px;background:rgba(212,168,83,0.15);color:var(--gold);border-radius:3px;padding:1px 5px;margin-left:4px;">ATTESA</span>`:'';
       return `<tr style="${isProv?'background:rgba(212,168,83,0.04);':''}">
         <td class="muted">${c.data}</td>
         <td class="td-n">${c.titolo}${badge}</td>
         <td>${tipoBadge(c.tipo)}</td>
-        <td style="${isProv?'color:var(--gold);font-style:italic;':'color:var(--green);'}">${E(c.netto)}</td>
+        <td style="${isProv?'color:var(--gold);font-style:italic;':'color:var(--green);'}">${E(d.netto)}</td>
       </tr>`;
     }).join('');
 
