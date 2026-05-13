@@ -1657,7 +1657,7 @@ function addAcq(){
   const dossier_id=parseInt(document.getElementById('a-dossier')?.value)||dos[0]?.id||null;
   if(!titolo||isNaN(prezzo)||isNaN(qty)||qty<=0){toast('Compila i campi obbligatori (titolo, prezzo, qtà)',true);return;}
   const rec={id:Date.now(),data,titolo,isin,ticker,tipo,settore,prezzo,qty,tobin,comm,dossier_id};
-  acq.push(rec);save();rendAcq();
+  acq.push(rec);save();rendAcq();rendCed();
   cUpsert('acquisti',rec);
   toast('Acquisto registrato ✓');
   ['a-titolo','a-isin','a-ticker','a-prezzo','a-qty','a-tobin','a-comm'].forEach(id=>document.getElementById(id).value='');
@@ -1696,7 +1696,7 @@ function rendAcq(){
     </td>
   </tr>`).join('');
 }
-function delAcq(id){if(!confirm('Eliminare questo acquisto?'))return;const r=acq.find(a=>a.id===id);acq=acq.filter(a=>a.id!==id);save();rendAcq();toast('Eliminato');if(r)cDelete('acquisti',id,r.sb_id);}
+function delAcq(id){if(!confirm('Eliminare questo acquisto?'))return;const r=acq.find(a=>a.id===id);acq=acq.filter(a=>a.id!==id);save();rendAcq();rendCed();toast('Eliminato');if(r)cDelete('acquisti',id,r.sb_id);}
 
 /* ══ CEDOLE ══ */
 function updCedQty(){
@@ -1809,14 +1809,15 @@ function rendCed(){
     // Per le provvisorie: calcola qty dinamicamente dal portafoglio nel dossier della cedola
     let dispQty=c.qty, dispLordo=c.lordo, dispTax=c.tax, dispNetto=c.netto;
     if(isProv){
-      // Calcola quantità in portafoglio per questo titolo in questo dossier
-      const qtyDossier = acq
-        .filter(a=>(a.isin||a.titolo)===c.isin && (!c.dossier_id||a.dossier_id==c.dossier_id))
-        .reduce((s,a)=>s+a.qty,0)
-        - ven
-        .filter(v=>(v.isin||v.titolo)===c.isin && (!c.dossier_id||v.dossier_id==c.dossier_id))
-        .reduce((s,v)=>s+v.qty,0);
-      dispQty=Math.max(0,qtyDossier)||c.qty;
+      // Chiave del titolo — stessa logica di getPort
+      const key=c.isin||c.titolo;
+      const qtyAcq = acq
+        .filter(a=>(a.isin||a.titolo)===key && (!c.dossier_id||String(a.dossier_id)===String(c.dossier_id)))
+        .reduce((s,a)=>s+(+a.qty||0),0);
+      const qtyVen = ven
+        .filter(v=>(v.isin||v.titolo)===key && (!c.dossier_id||String(v.dossier_id)===String(c.dossier_id)))
+        .reduce((s,v)=>s+(+v.qty||0),0);
+      dispQty=Math.max(0,qtyAcq-qtyVen)||c.qty;
       dispLordo=+(c.unit*dispQty).toFixed(4);
       dispTax=+(dispLordo*0.26).toFixed(4);
       dispNetto=+(dispLordo-(c.comm||0)-dispTax).toFixed(4);
@@ -1904,7 +1905,7 @@ function addVen(){
   if(pl>0&&minus>0){mc=Math.min(minus,pl);bi=pl-mc;}
   const tax=bi>0?bi*0.26:0,net=ric-tax;
   ven.push({id:Date.now(),data,isin,titolo,tipo,qty,prez,comm,pmc,pl,mc,tax,net,dossier_id});
-  save();rendVen();updMinus();
+  save();rendVen();rendCed();updMinus();
   cUpsert('vendite',ven[ven.length-1]);
   toast('Vendita registrata ✓');
   ['v-qty','v-prez','v-comm','v-pmc'].forEach(id=>document.getElementById(id).value='');
@@ -1943,7 +1944,7 @@ function rendVen(){
     </td>
   </tr>`).join('');
 }
-function delVen(id){if(!confirm("Eliminare?"))return;const r=ven.find(v=>v.id===id);ven=ven.filter(v=>v.id!==id);save();rendVen();updMinus();toast("Eliminata");if(r)cDelete("vendite",id,r.sb_id);}
+function delVen(id){if(!confirm("Eliminare?"))return;const r=ven.find(v=>v.id===id);ven=ven.filter(v=>v.id!==id);save();rendVen();rendCed();updMinus();toast("Eliminata");if(r)cDelete("vendite",id,r.sb_id);}
 
 /* ══ MODIFICA RECORD ══ */
 let _editCtx=null; // {type:'acq'|'ced'|'ven', id}
