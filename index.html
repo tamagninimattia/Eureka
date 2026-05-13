@@ -493,10 +493,10 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
           <thead><tr>
             <th style="width:24px"></th>
             <th>Titolo</th>
-            <th>Costo carico</th>
+            <th>Valore di carico</th>
             <th>Prezzo attuale</th>
             <th>Variazione</th>
-            <th>Var. Ctv.</th>
+            <th>Var €</th>
             <th>Controvalore</th>
           </tr></thead>
           <tbody id="tb-port"></tbody>
@@ -2335,21 +2335,39 @@ function updMetrics(){
 }
 
 function aggiornaRigaTotale(tit){
-  let totCtv=0, anyVal=false;
+  let totCtv=0, totVarCtv=0, anyVal=false, anyVar=false;
+  const port=getPort();
   (tit||[]).forEach(p=>{
     const key=p.isin||p.titolo;
     const esc=CSS.escape(key);
     const ctvEl=document.getElementById('pc-ctv-'+esc);
     if(ctvEl&&ctvEl.textContent!=='—'){
       anyVal=true;
-      const parse=s=>parseFloat(s.replace(/[€\s.]/g,'').replace(',','.'))||0;
+      const parse=s=>parseFloat(s.replace(/[€\s]/g,'').replace(/\./g,'').replace(',','.'))||0;
       totCtv+=parse(ctvEl.textContent);
     }
+    // Somma varCtv dalle righe: leggi dall'array portPrices
+    const pp=portPrices[key]&&typeof portPrices[key]==='object'?portPrices[key]:{};
+    const change=pp.change??null;
+    const priceDate=pp.updatedAt?pp.updatedAt.slice(0,10):null;
+    if(change!==null&&priceDate){
+      const qtyAtDate = acq.filter(a=>(a.isin||a.titolo)===key&&a.data<priceDate).reduce((s,a)=>s+(+a.qty||0),0)
+                      - ven.filter(v=>(v.isin||v.titolo)===key&&v.data<priceDate).reduce((s,v)=>s+(+v.qty||0),0);
+      if(qtyAtDate>0){ totVarCtv+=change*qtyAtDate; anyVar=true; }
+    }
   });
-  const el=document.getElementById('tot-ctv');
-  if(el){
-    el.textContent=anyVal?E(totCtv):'—';
-    el.style.color='var(--gold)';
+
+  const ctvEl=document.getElementById('tot-ctv');
+  if(ctvEl){ ctvEl.textContent=anyVal?E(totCtv):'—'; ctvEl.style.color='var(--gold)'; }
+
+  const varEl=document.getElementById('tot-var-ctv');
+  if(varEl){
+    if(anyVar){
+      const isPos=totVarCtv>=0;
+      varEl.innerHTML=`<span style="font-family:var(--mono);font-size:13px;font-weight:400;color:${isPos?'var(--green)':'var(--red)'};background:${isPos?'rgba(52,201,126,0.1)':'rgba(224,84,112,0.1)'};border:1px solid ${isPos?'rgba(52,201,126,0.2)':'rgba(224,84,112,0.2)'};border-radius:5px;padding:2px 7px;white-space:nowrap;">${isPos?'+':''}${E(totVarCtv)}</span>`;
+    } else {
+      varEl.innerHTML='<span style="color:var(--text3);font-size:11px;">—</span>';
+    }
   }
 }
 
@@ -2381,6 +2399,8 @@ function recalcPortRow(key){
 
   ctvEl.textContent = E(ctv);
   ctvEl.className   = 'td-calc gold';
+  ctvEl.style.fontSize='15px';
+  ctvEl.style.fontWeight='600';
 }
 
 function updDashKPI(){
@@ -2635,14 +2655,14 @@ function updDash(){
           ? `<a href="https://finance.yahoo.com/quote/${encodeURIComponent(p.ticker)}" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;border-bottom:1px dashed var(--text3);transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='var(--gold)';this.style.borderColor='var(--gold)'" onmouseout="this.style.color='var(--text)';this.style.borderColor='var(--text3)'">${p.titolo}</a>`
           : p.titolo
         }</td>
-        <td class="gold">${E(p.costo)}</td>
+        <td class="gold" style="font-size:15px;font-weight:600;">${E(p.costo)}</td>
         <td>
           <span style="font-family:var(--mono);font-size:13px;color:var(--text);">${prezVal!==''?E(+prezVal,4):'—'}</span>
           ${updStr}
         </td>
         <td>${varBadge||'<span style="color:var(--text3);font-size:11px;">—</span>'}</td>
         <td>${varCtvBadge}</td>
-        <td class="td-calc" id="pc-ctv-${esc}">—</td>
+        <td class="td-calc" id="pc-ctv-${esc}" style="font-size:15px;font-weight:600;">—</td>
       </tr>`;
     }).join('');
     tit.forEach(p=>recalcPortRow(p.isin||p.titolo));
@@ -2656,11 +2676,11 @@ function updDash(){
     totRow.innerHTML=`
       <td></td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">Totale portafoglio</td>
-      <td style="font-family:var(--mono);font-size:12px;color:var(--gold);font-weight:600;">${E(totCosto)}</td>
+      <td style="font-family:var(--mono);font-size:15px;color:var(--gold);font-weight:600;">${E(totCosto)}</td>
       <td></td>
       <td></td>
-      <td></td>
-      <td id="tot-ctv" style="font-family:var(--mono);font-size:13px;color:var(--gold);font-weight:700;">—</td>
+      <td id="tot-var-ctv">—</td>
+      <td id="tot-ctv" style="font-family:var(--mono);font-size:15px;color:var(--gold);font-weight:700;">—</td>
     `;
     tb.appendChild(totRow);
     setTimeout(()=>aggiornaRigaTotale(tit),50);
@@ -3254,11 +3274,8 @@ function startAutoRefresh(){
   }, 1000);
 
   updateBtn();
-  // Prima chiamata immediata se borsa aperta
-  if(isMktOpen()){
-    const dashVisible=document.getElementById('tab-dashboard')?.classList.contains('active');
-    if(dashVisible) fetchPricesFromFinnhub();
-  }
+  // Aggiorna prezzi subito all'avvio, indipendentemente dagli orari di borsa
+  setTimeout(()=>fetchPricesFromFinnhub(), 1500);
 }
 
 function stopAutoRefresh(){
