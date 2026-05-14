@@ -531,7 +531,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
           <!-- 2. TIR reale — dinamico -->
           <div id="cell-tir-reale" class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);transition:background 0.3s,border-color 0.3s;">
             <div id="line-tir-reale" style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);transition:background 0.3s;"></div>
-            <div id="label-tir-reale" style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;margin-bottom:10px;color:var(--green);transition:color 0.3s;">TIR reale</div>
+            <div id="label-tir-reale" style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;margin-bottom:10px;color:var(--green);transition:color 0.3s;">TIR reale</div>
             <div id="m-xirr-real" style="font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-0.03em;color:var(--green);transition:color 0.3s;"></div>
           </div>
 
@@ -2550,7 +2550,12 @@ function updDashKPI(){
 
   // Cedole totali → metric cell
   const filteredCedAll=ced.filter(c=>filterKey(c.isin||c.titolo)&&!c.provvisoria);
-  const totCedDisp=filteredCedAll.reduce((s,c)=>s+c.netto,0);
+  const totCedDisp=filteredCedAll.reduce((s,c)=>{
+    const lordo=+c.lordo||0;
+    const comm=inclComm?(+c.comm||0):0;
+    const tax=inclTax?(+c.tax||0):0;
+    return s+(lordo-comm-tax);
+  },0);
   const cedEl=document.getElementById('m-cedole-tot');
   if(cedEl){cedEl.textContent=E(totCedDisp);cedEl.style.color=totCedDisp>=0?'var(--green)':'var(--red)';}
 
