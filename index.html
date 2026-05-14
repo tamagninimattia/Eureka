@@ -3320,11 +3320,12 @@ async function fetchInflazione(){
 
     // Scarica serie HICP livelli indice per Italia dall'inizio al più recente
     // Serie M.IT.N.000000.4.INX = indice HICP mensile Italia (base 2015=100)
-    const url=`${SB_URL}/functions/v1/get-prices`;
-    console.log('[HICP] Chiamata a:', url, 'startPeriod:', meseInizio);
+    // Nuovo endpoint ECB (dal 4 feb 2026): data-api.ecb.europa.eu/service/data
+    const ecbUrl=`https://data-api.ecb.europa.eu/service/data/HICP/M.IT.N.000000.4.INX?startPeriod=${meseInizio}&format=jsondata`;
+    console.log('[HICP] Chiamata a Edge Function, ECB url:', ecbUrl);
     let res;
     try{
-      res=await fetch(url,{
+      res=await fetch(`${SB_URL}/functions/v1/get-prices`,{
         method:'POST',
         headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`},
         body:JSON.stringify({hicp:{startPeriod:meseInizio}})
