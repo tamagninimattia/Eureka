@@ -3357,6 +3357,12 @@ async function fetchInflazione(){
 
     if(!hicpInizio||!hicpFine) throw new Error('Valori HICP non disponibili');
 
+    console.log('[HICP] Primo mese:', periodoInizio, '→ valore:', hicpInizio);
+    console.log('[HICP] Ultimo mese:', periodoFine, '→ valore:', hicpFine);
+    console.log('[HICP] Anni effettivi:', anniEff);
+    console.log('[HICP] Ratio:', hicpFine/hicpInizio);
+    console.log('[HICP] CAGR grezzo:', (Math.pow(hicpFine/hicpInizio,1/anniEff)-1)*100);
+
     // Anni effettivi tra i due mesi HICP disponibili
     const [yS,mS]=periodoInizio.split('-').map(Number);
     const [yE,mE]=periodoFine.split('-').map(Number);
