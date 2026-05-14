@@ -494,6 +494,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
             <th>Variazione</th>
             <th>Var €</th>
             <th>Controvalore</th>
+            <th>Unrealized P&amp;L</th>
           </tr></thead>
           <tbody id="tb-port"></tbody>
         </table></div>
@@ -554,10 +555,10 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
             <div id="m-cedole-tot" style="font-family:var(--serif);font-size:28px;color:var(--green);line-height:1;letter-spacing:-0.03em;">—</div>
           </div>
 
-          <!-- 6. P&L vendite netto — dinamico -->
+          <!-- 6. Realized P&L — dinamico -->
           <div id="cell-pl-vendite" class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);transition:background 0.3s,border-color 0.3s;">
             <div id="line-pl-vendite" style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);transition:background 0.3s;"></div>
-            <div id="label-pl-vendite" style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;color:var(--green);margin-bottom:10px;transition:color 0.3s;">P&amp;L vendite netto</div>
+            <div id="label-pl-vendite" style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;color:var(--green);margin-bottom:10px;transition:color 0.3s;">Realized P&amp;L</div>
             <div id="m-pl-vendite" style="font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-0.03em;color:var(--green);transition:color 0.3s;">—</div>
           </div>
 
@@ -2363,7 +2364,7 @@ function updMetrics(){
 }
 
 function aggiornaRigaTotale(tit){
-  let totCtv=0, totVarCtv=0, anyVal=false, anyVar=false;
+  let totCtv=0, totVarCtv=0, totUpl=0, anyVal=false, anyVar=false;
   const port=getPort();
   (tit||[]).forEach(p=>{
     const key=p.isin||p.titolo;
@@ -2372,9 +2373,10 @@ function aggiornaRigaTotale(tit){
     if(ctvEl&&ctvEl.textContent!=='—'){
       anyVal=true;
       const parse=s=>parseFloat(s.replace(/[€\s]/g,'').replace(/\./g,'').replace(',','.'))||0;
-      totCtv+=parse(ctvEl.textContent);
+      const ctv=parse(ctvEl.textContent);
+      totCtv+=ctv;
+      totUpl+=ctv-p.costo;
     }
-    // Somma varCtv dalle righe: leggi dall'array portPrices
     const pp=portPrices[key]&&typeof portPrices[key]==='object'?portPrices[key]:{};
     const change=pp.change??null;
     const priceDate=pp.updatedAt?pp.updatedAt.slice(0,10):null;
@@ -2388,15 +2390,13 @@ function aggiornaRigaTotale(tit){
   const ctvEl=document.getElementById('tot-ctv');
   if(ctvEl){ ctvEl.textContent=anyVal?E(totCtv):'—'; ctvEl.style.color='var(--gold)'; }
 
+  const badge=(v,show)=>show?`<span style="font-family:var(--mono);font-size:13px;font-weight:400;color:${v>=0?'var(--green)':'var(--red)'};background:${v>=0?'rgba(52,201,126,0.1)':'rgba(224,84,112,0.1)'};border:1px solid ${v>=0?'rgba(52,201,126,0.2)':'rgba(224,84,112,0.2)'};border-radius:5px;padding:2px 7px;white-space:nowrap;">${v>=0?'+':''}${E(v)}</span>`:'<span style="color:var(--text3);font-size:11px;">—</span>';
+
   const varEl=document.getElementById('tot-var-ctv');
-  if(varEl){
-    if(anyVar){
-      const isPos=totVarCtv>=0;
-      varEl.innerHTML=`<span style="font-family:var(--mono);font-size:13px;font-weight:400;color:${isPos?'var(--green)':'var(--red)'};background:${isPos?'rgba(52,201,126,0.1)':'rgba(224,84,112,0.1)'};border:1px solid ${isPos?'rgba(52,201,126,0.2)':'rgba(224,84,112,0.2)'};border-radius:5px;padding:2px 7px;white-space:nowrap;">${isPos?'+':''}${E(totVarCtv)}</span>`;
-    } else {
-      varEl.innerHTML='<span style="color:var(--text3);font-size:11px;">—</span>';
-    }
-  }
+  if(varEl) varEl.innerHTML=badge(totVarCtv,anyVar);
+
+  const uplEl=document.getElementById('tot-upl');
+  if(uplEl) uplEl.innerHTML=badge(totUpl,anyVal);
 }
 
 function getGlobalComm(){
@@ -2421,14 +2421,18 @@ function recalcPortRow(key){
   }
 
   const ctv = prez * p.qty;
-  const pl  = ctv - p.costoFiscale - comm;
-  const tax = pl * 0.26;
-  const liq = ctv - tax - comm;
+  const upl = ctv - p.costo; // Unrealized P&L = Controvalore - Valore di Carico
 
   ctvEl.textContent = E(ctv);
   ctvEl.className   = 'td-calc gold';
   ctvEl.style.fontSize='15px';
   ctvEl.style.fontWeight='600';
+
+  const uplEl=document.getElementById('pc-upl-'+esc);
+  if(uplEl){
+    const isPos=upl>=0;
+    uplEl.innerHTML=`<span style="font-family:var(--mono);font-size:13px;font-weight:400;color:${isPos?'var(--green)':'var(--red)'};background:${isPos?'rgba(52,201,126,0.1)':'rgba(224,84,112,0.1)'};border:1px solid ${isPos?'rgba(52,201,126,0.2)':'rgba(224,84,112,0.2)'};border-radius:5px;padding:2px 7px;white-space:nowrap;">${isPos?'+':''}${E(upl)}</span>`;
+  }
 }
 
 function updDashKPI(){
@@ -2534,7 +2538,7 @@ function updDashKPI(){
     taxEl.style.opacity=hasSomething?'1':'0.4';
   }
 
-  // P&L vendite netto
+  // Realized P&L
   const filteredVenAll=ven.filter(v=>filterKey(v.isin||v.titolo));
   const plVenNetto=filteredVenAll.reduce((s,v)=>s+v.net,0);
   const plVenEl=document.getElementById('m-pl-vendite');
@@ -2619,7 +2623,7 @@ function updDash(){
   const tit=orderedKeys.map(k=>allTit.find(p=>(p.isin||p.titolo)===k)).filter(Boolean);
 
   if(!tit.length){
-    tb.innerHTML=`<tr><td colspan="7" class="empty">Nessuna posizione${isFiltered?' per il filtro selezionato':' aperta'}</td></tr>`;
+    tb.innerHTML=`<tr><td colspan="8" class="empty">Nessuna posizione${isFiltered?' per il filtro selezionato':' aperta'}</td></tr>`;
   } else {
     tb.innerHTML=tit.map(p=>{
       const key=p.isin||p.titolo;
@@ -2687,6 +2691,7 @@ function updDash(){
         <td>${varBadge||'<span style="color:var(--text3);font-size:11px;">—</span>'}</td>
         <td>${varCtvBadge}</td>
         <td class="td-calc" id="pc-ctv-${esc}" style="font-size:15px;font-weight:600;">—</td>
+        <td class="td-calc" id="pc-upl-${esc}">—</td>
       </tr>`;
     }).join('');
     tit.forEach(p=>recalcPortRow(p.isin||p.titolo));
@@ -2705,6 +2710,7 @@ function updDash(){
       <td></td>
       <td id="tot-var-ctv">—</td>
       <td id="tot-ctv" style="font-family:var(--mono);font-size:15px;color:var(--gold);font-weight:700;">—</td>
+      <td id="tot-upl">—</td>
     `;
     tb.appendChild(totRow);
     setTimeout(()=>aggiornaRigaTotale(tit),50);
