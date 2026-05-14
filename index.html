@@ -470,10 +470,12 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
             <span style="font-family:var(--mono);font-size:10px;color:var(--text2);">€</span>
           </div>
           <div class="filter-sep"></div>
-          <div style="display:flex;align-items:center;gap:6px;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
             <span style="font-family:var(--mono);font-size:10px;color:var(--text2);">Inflazione</span>
             <input type="number" id="infl-rate" value="2.5" step="0.1" min="0" max="30" oninput="updMetrics()" style="width:52px;padding:4px 6px;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);">
             <span style="font-family:var(--mono);font-size:10px;color:var(--text2);">% / anno</span>
+            <button id="btn-upd-infl" onclick="fetchInflazione()" title="Aggiorna con dato HICP Italia (ECB)" style="font-family:var(--mono);font-size:10px;padding:3px 8px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text2);cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">↻ HICP</button>
+            <span id="infl-last-upd" style="font-family:var(--mono);font-size:9px;color:var(--text3);"></span>
           </div>
         </div>
       </div>
@@ -3300,6 +3302,93 @@ function togglePausePrices(){
   }
 }
 
+/* ── INFLAZIONE HICP (ECB) ── */
+async function fetchInflazione(){
+  const btn=document.getElementById('btn-upd-infl');
+  const note=document.getElementById('infl-last-upd');
+  if(btn){btn.textContent='⏳';btn.disabled=true;}
+  try{
+    // Trova la data del primo acquisto in portafoglio (filtrato per dossier/tipo attivo)
+    const port=getPort();
+    const keysAttivi=Object.keys(port).filter(k=>port[k].qty>0&&filterKey(k));
+    const acqAttivi=acq.filter(a=>keysAttivi.includes(a.isin||a.titolo));
+    if(!acqAttivi.length) throw new Error('Nessun acquisto in portafoglio per calcolare il periodo');
+
+    // Data primo acquisto → mese iniziale HICP
+    const primoAcq=acqAttivi.map(a=>a.data).sort()[0]; // es. "2020-03-15"
+    const meseInizio=primoAcq.slice(0,7); // es. "2020-03"
+
+    // Scarica serie HICP livelli indice per Italia dall'inizio al più recente
+    // Serie M.IT.N.000000.4.INX = indice HICP mensile Italia (base 2015=100)
+    const url=`https://data.ecb.europa.eu/api/data/HICP/M.IT.N.000000.4.INX?startPeriod=${meseInizio}&format=jsondata`;
+    const res=await fetch(url,{headers:{'Accept':'application/json'}});
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data=await res.json();
+
+    const series=data?.dataSets?.[0]?.series;
+    const seriesKey=Object.keys(series||{})[0];
+    const obs=series?.[seriesKey]?.observations;
+    const periods=data?.structure?.dimensions?.observation?.[0]?.values;
+    if(!obs||!periods) throw new Error('Dati HICP non disponibili');
+
+    // Ordina osservazioni per indice temporale
+    const sortedIdx=Object.keys(obs).map(Number).sort((a,b)=>a-b);
+    const firstIdx=sortedIdx[0];
+    const lastIdx=sortedIdx[sortedIdx.length-1];
+
+    const hicpInizio=obs[firstIdx]?.[0];
+    const hicpFine=obs[lastIdx]?.[0];
+    const periodoInizio=periods[firstIdx]?.id||meseInizio;
+    const periodoFine=periods[lastIdx]?.id||'';
+
+    if(!hicpInizio||!hicpFine) throw new Error('Valori HICP non disponibili');
+
+    // Calcola anni tra i due periodi
+    const [yStart,mStart]=periodoInizio.split('-').map(Number);
+    const [yEnd,mEnd]=periodoFine.split('-').map(Number);
+    const anni=(yEnd-yStart)+(mEnd-mStart)/12;
+
+    if(anni<=0) throw new Error('Periodo troppo breve');
+
+    // CAGR inflazione = (HICP_finale/HICP_iniziale)^(1/anni) - 1
+    const cagr=(Math.pow(hicpFine/hicpInizio,1/anni)-1)*100;
+
+    // Aggiorna campo
+    const inflField=document.getElementById('infl-rate');
+    if(inflField){inflField.value=cagr.toFixed(2);updMetrics();}
+
+    // Salva in localStorage
+    const updAt=new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit'});
+    localStorage.setItem('hicp_value',cagr.toFixed(2));
+    localStorage.setItem('hicp_period',`${periodoInizio}→${periodoFine}`);
+    localStorage.setItem('hicp_upd',updAt);
+
+    const meseI=periodoInizio.replace('-','/');
+    const meseF=periodoFine.replace('-','/');
+    if(note) note.textContent=`HICP IT ${meseI}→${meseF} · CAGR ${cagr.toFixed(2)}% · agg. ${updAt}`;
+
+    toast(`Inflazione HICP Italia (CAGR ${meseI}→${meseF}): ${cagr.toFixed(2)}% ✓`);
+
+  }catch(e){
+    console.error('fetchInflazione:',e);
+    toast('Errore recupero HICP: '+e.message,true);
+  }finally{
+    if(btn){btn.textContent='↻ HICP';btn.disabled=false;}
+  }
+}
+
+function restoreHicpNote(){
+  const value=localStorage.getItem('hicp_value');
+  const period=localStorage.getItem('hicp_period');
+  const upd=localStorage.getItem('hicp_upd');
+  const note=document.getElementById('infl-last-upd');
+  const field=document.getElementById('infl-rate');
+  if(value&&note){
+    note.textContent=`HICP IT ${period||''} · agg. ${upd||''}`;
+    if(field&&field.value==='2.5') field.value=parseFloat(value).toFixed(2);
+  }
+}
+
 let _autoRefreshTimer = null;
 const AUTO_REFRESH_INTERVAL = 60; // secondi
 
@@ -3403,6 +3492,7 @@ function initApp(){
   fillAnaSelect();buildFilterChips();updDash();updMinus();
   // Verifica provvisorie con piccolo delay per assicurarsi che i dati siano pronti
   setTimeout(verificaProvvisorie, 500);
+  restoreHicpNote();
   ['a-data','c-data','c-dpag','v-data','k-data'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value=today();
   });
