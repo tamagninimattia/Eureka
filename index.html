@@ -3347,30 +3347,23 @@ async function fetchInflazione(){
     if(!obs||!periods) throw new Error('Dati HICP non disponibili');
 
     const sortedIdx=Object.keys(obs).map(Number).sort((a,b)=>a-b);
-    const firstIdx=sortedIdx[0];
-    const lastIdx=sortedIdx[sortedIdx.length-1];
 
-    const hicpInizio=obs[firstIdx]?.[0];
-    const hicpFine=obs[lastIdx]?.[0];
-    const periodoInizio=periods[firstIdx]?.id||meseInizio;
-    const periodoFine=periods[lastIdx]?.id||meseFine;
+    // Calcola la media dei tassi annui nel periodo
+    const valori=sortedIdx.map(i=>obs[i]?.[0]).filter(v=>v!==null&&v!==undefined);
+    if(!valori.length) throw new Error('Nessun dato ANR disponibile');
 
-    if(!hicpInizio||!hicpFine) throw new Error('Valori HICP non disponibili');
+    const periodoInizio=periods[sortedIdx[0]]?.id||meseInizio;
+    const periodoFine=periods[sortedIdx[sortedIdx.length-1]]?.id||meseFine;
+    const mediaANR=valori.reduce((s,v)=>s+v,0)/valori.length;
 
-    // Anni effettivi tra i due mesi HICP disponibili
-    const [yS,mS]=periodoInizio.split('-').map(Number);
-    const [yE,mE]=periodoFine.split('-').map(Number);
-    const anniEff=(yE-yS)+(mE-mS)/12;
-    if(anniEff<=0) throw new Error('Periodo HICP troppo breve');
+    console.log('[HICP] Periodo:', periodoInizio, '→', periodoFine);
+    console.log('[HICP] Tassi mensili ANR:', valori);
+    console.log('[HICP] Media ANR:', mediaANR);
 
-    console.log('[HICP] Primo mese:', periodoInizio, '→ valore:', hicpInizio);
-    console.log('[HICP] Ultimo mese:', periodoFine, '→ valore:', hicpFine);
-    console.log('[HICP] Anni effettivi:', anniEff);
-    console.log('[HICP] Ratio:', hicpFine/hicpInizio);
-    console.log('[HICP] CAGR grezzo:', (Math.pow(hicpFine/hicpInizio,1/anniEff)-1)*100);
+    if(isNaN(mediaANR)) throw new Error('Calcolo media ANR fallito');
 
-    // CAGR = (HICP_fine / HICP_inizio)^(1/anni) - 1
-    const cagr=(Math.pow(hicpFine/hicpInizio,1/anniEff)-1)*100;
+    // Usa la media come inflazione annua effettiva nel periodo
+    const cagr=mediaANR;
 
     // Aggiorna campo inflazione e badge
     const inflField=document.getElementById('infl-rate');
@@ -3387,8 +3380,8 @@ async function fetchInflazione(){
 
     const meseI=periodoInizio.replace('-','/');
     const meseF=periodoFine.replace('-','/');
-    if(note) note.textContent=`HICP IT ${meseI}→${meseF} · duration ${dur.toFixed(2)}a · CAGR ${cagr.toFixed(2)}% · agg. ${updAt}`;
-    toast(`Inflazione HICP (duration ${dur.toFixed(2)} anni): ${cagr.toFixed(2)}% ✓`);
+    if(note) note.textContent=`HICP IT ${meseI}→${meseF} · media ANR ${cagr.toFixed(2)}% · agg. ${updAt}`;
+    toast(`Inflazione media HICP Italia (${meseI}→${meseF}): ${cagr.toFixed(2)}% ✓`);
 
   }catch(e){
     console.error('fetchInflazione:',e);
