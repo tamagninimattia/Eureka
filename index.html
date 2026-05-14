@@ -361,6 +361,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
     <button class="ni" onclick="sw('costi',this)"><div class="ni-ico">−</div><span>Costi</span></button>
     <div style="flex:1;"></div>
     <button class="ni" id="btn-refresh-prices" onclick="fetchPricesFromFinnhub()" style="color:var(--green);"><div class="ni-ico" style="background:rgba(52,201,126,0.12);">↻</div><span>Prezzi</span></button>
+    <button class="ni" id="btn-pause-prices" onclick="togglePausePrices()" title="Pausa/riprendi aggiornamento automatico" style="color:var(--text2);"><div class="ni-ico" id="pause-ico">⏸</div><span id="pause-label">Pausa</span></button>
     <button class="ni" onclick="sbLogout()" style="color:var(--red);"><div class="ni-ico" style="background:rgba(224,84,112,0.1);">⏻</div><span>Esci</span></button>
   </nav>
   <div class="sb-backup">
@@ -3271,6 +3272,27 @@ async function fetchPricesFromFinnhub(){
   }
 }
 
+let _pricesPaused = false;
+
+function togglePausePrices(){
+  _pricesPaused = !_pricesPaused;
+  const ico=document.getElementById('pause-ico');
+  const lbl=document.getElementById('pause-label');
+  const btn=document.getElementById('btn-pause-prices');
+  if(_pricesPaused){
+    if(ico) ico.textContent='▶';
+    if(lbl) lbl.textContent='Riprendi';
+    if(btn) btn.style.color='var(--gold)';
+    toast('Aggiornamento prezzi in pausa ⏸');
+  } else {
+    if(ico) ico.textContent='⏸';
+    if(lbl) lbl.textContent='Pausa';
+    if(btn) btn.style.color='var(--text2)';
+    fetchPricesFromFinnhub();
+    toast('Aggiornamento prezzi ripreso ▶');
+  }
+}
+
 let _autoRefreshTimer = null;
 const AUTO_REFRESH_INTERVAL = 60; // secondi
 
@@ -3293,6 +3315,7 @@ function startAutoRefresh(){
 
   // Tick ogni secondo per il countdown visivo
   _autoRefreshTimer = setInterval(()=>{
+    if(_pricesPaused) return;
     countdown--;
     updateBtn();
     if(countdown<=0){
@@ -3304,7 +3327,7 @@ function startAutoRefresh(){
 
   updateBtn();
   // Aggiorna prezzi subito all'avvio, indipendentemente dagli orari di borsa
-  setTimeout(()=>fetchPricesFromFinnhub(), 1500);
+  setTimeout(()=>{ if(!_pricesPaused) fetchPricesFromFinnhub(); }, 1500);
 }
 
 function stopAutoRefresh(){
