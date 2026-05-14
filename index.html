@@ -2471,30 +2471,18 @@ function recalcPortRow(key){
   const comm=getGlobalComm();
   const esc=CSS.escape(key);
 
-  const titEl=document.getElementById('port-tit-'+esc);
-  if(titEl){
-    const anEntry=ana.find(a=>a.isin===key||a.nome===p.titolo);
-    const chartSym=anEntry?.hasChart&&anEntry?.chartSym?anEntry.chartSym:'';
-    const link=p.ticker
-      ? '<a href="https://finance.yahoo.com/quote/'+encodeURIComponent(p.ticker)+'" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;border-bottom:1px dashed var(--text3);" onmouseover="this.style.color=\'var(--gold)\'" onmouseout="this.style.color=\'var(--text)\'">'+p.titolo+'</a>'
-      : p.titolo;
-    const icon=chartSym
-      ? '<span onmouseenter="showChartPopup(this,\''+chartSym+'\')" onmouseleave="hideChartPopup()" style="cursor:pointer;margin-left:6px;font-size:13px;opacity:0.7;" onmouseover="this.style.opacity=\'1\'" onmouseout="this.style.opacity=\'0.7\'">📈</span>'
-      : '';
-    titEl.innerHTML=link+icon;
-  }
-
-
+  const ctvEl=document.getElementById('pc-ctv-'+esc);
+  if(!ctvEl) return;
 
   if(prez===null){
     ctvEl.textContent='—'; ctvEl.className='td-calc';
     return;
   }
 
-  const ctv   = prez * p.qty;
-  const pl    = ctv - p.costoFiscale - comm;
-  const tax   = pl * 0.26;
-  const liq   = ctv - tax - comm;
+  const ctv = prez * p.qty;
+  const pl  = ctv - p.costoFiscale - comm;
+  const tax = pl * 0.26;
+  const liq = ctv - tax - comm;
 
   ctvEl.textContent = E(ctv);
   ctvEl.className   = 'td-calc gold';
@@ -2743,6 +2731,15 @@ function updDash(){
         ${varCtv>=0?'+':''}${E(varCtv)}
       </span>` : '<span style="color:var(--text3);font-size:11px;">—</span>';
 
+      const anEntry=ana.find(a=>a.isin===key||a.nome===p.titolo);
+      const chartSym=anEntry?.hasChart&&anEntry?.chartSym?anEntry.chartSym:'';
+      const titLink=p.ticker
+        ? '<a href="https://finance.yahoo.com/quote/'+encodeURIComponent(p.ticker)+'" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;border-bottom:1px dashed var(--text3);" onmouseover="this.style.color=\'var(--gold)\'" onmouseout="this.style.color=\'var(--text)\'">'+p.titolo+'</a>'
+        : p.titolo;
+      const chartIcon=chartSym
+        ? '<span onmouseenter="showChartPopup(this,\''+chartSym+'\')" onmouseleave="hideChartPopup()" style="cursor:pointer;margin-left:6px;font-size:13px;opacity:0.7;" onmouseover="this.style.opacity=\'1\'" onmouseout="this.style.opacity=\'0.7\'">📈</span>'
+        : '';
+
       return `<tr id="port-row-${esc}" draggable="true" data-key="${key}" class="port-detail-row"
           ondragstart="onPortDragStart(event)"
           ondragover="onPortDragOver(event)"
@@ -2750,7 +2747,7 @@ function updDash(){
           ondrop="onPortDrop(event)"
           ondragend="onPortDragEnd(event)">
         <td><span class="drag-handle" title="Trascina per riordinare">⠿</span></td>
-        <td class="td-n" id="port-tit-${esc}">—</td>
+        <td class="td-n">${titLink}${chartIcon}</td>
         <td class="gold" style="font-size:15px;font-weight:600;">${E(p.costo)}</td>
         <td>
           <span style="font-family:var(--mono);font-size:13px;color:var(--text);">${prezVal!==''?E(+prezVal,4):'—'}</span>
