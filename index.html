@@ -454,10 +454,6 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
             <input type="checkbox" id="tog-tax" checked onchange="updDash()">
             <span class="toggle-pill"></span><span>Tasse</span>
           </label>
-          <label class="toggle-wrap" title="Includi costi di gestione nei calcoli">
-            <input type="checkbox" id="tog-cos" checked onchange="updDash()">
-            <span class="toggle-pill"></span><span>Costi gest.</span>
-          </label>
           <label class="toggle-wrap" title="Includi imposte latenti nel valore di liquidazione">
             <input type="checkbox" id="tog-tax-lat" checked onchange="updDash()">
             <span class="toggle-pill"></span><span>Imp. latenti</span>
@@ -584,13 +580,6 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
             <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.5;"></div>
             <div class="metric-label" style="color:var(--gold);">Capitale investito</div>
             <div id="m-cap-inv" style="font-family:var(--serif);font-size:20px;color:var(--gold);line-height:1;letter-spacing:-0.01em;margin-top:6px;">—</div>
-          </div>
-
-          <!-- 3. Oneri accessori (tog-cos) -->
-          <div class="metric-card" style="padding:12px 16px;position:relative;overflow:hidden;">
-            <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--red),transparent);opacity:0.5;"></div>
-            <div class="metric-label" style="color:var(--red);">Oneri accessori</div>
-            <div id="m-costi-man" style="font-family:var(--serif);font-size:20px;color:var(--red);line-height:1;letter-spacing:-0.01em;margin-top:6px;">—</div>
           </div>
 
           <!-- 4. Commissioni (tog-comm + tog-comm-lat) -->
@@ -1063,7 +1052,7 @@ function resetFilters(){
   fType='all';fSector='all';fTitolo='';fDossier='all';
   const sel=document.getElementById('filter-titolo');
   if(sel) sel.value='';
-  ['tog-comm','tog-tax','tog-cos','tog-tax-lat','tog-comm-lat'].forEach(id=>{
+  ['tog-comm','tog-tax','tog-tax-lat','tog-comm-lat'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.checked=true;
   });
   buildFilterChips();
@@ -2130,6 +2119,7 @@ function saveEdit(){
   else if(_editCtx.type==='ven') saveEditVen(_editCtx.id);
   else if(_editCtx.type==='ana') saveEditAna(_editCtx.id);
   else if(_editCtx.type==='dossier') saveEditDossier(_editCtx.id);
+  else if(_editCtx.type==='cos') saveEditCos(_editCtx.id);
   else if(_editCtx.type==='sposta') closeEdit(); // nessun save unico, ogni riga salva autonomamente
 }
 
@@ -2155,8 +2145,43 @@ function rendCos(){
     <td class="muted">${k.data}</td>
     <td><span class="badge ${bc[k.tipo]||'ba'}">${k.tipo}</span></td>
     <td>${k.descrizione||k.desc||'—'}</td><td class="neg">${E(k.imp)}</td>
-    <td><button class="btn-del" onclick="delCos(${k.id})">✕</button></td>
+    <td style="white-space:nowrap">
+      <button class="btn-edit" onclick="editCos(${k.id})">✎</button>
+      <button class="btn-del" onclick="delCos(${k.id})">✕</button>
+    </td>
   </tr>`).join('');
+}
+
+function editCos(id){
+  const k=cos.find(x=>x.id===id);if(!k)return;
+  const body=`<div class="fg">
+    <div class="fgroup"><label class="fl">Data</label><input type="date" id="em-cos-data" value="${k.data||''}"></div>
+    <div class="fgroup">
+      <label class="fl">Tipo</label>
+      <select id="em-cos-tipo">
+        <option value="commissione"${k.tipo==='commissione'?' selected':''}>Commissione</option>
+        <option value="imposta"${k.tipo==='imposta'?' selected':''}>Imposta</option>
+        <option value="altro"${k.tipo==='altro'?' selected':''}>Altro</option>
+      </select>
+    </div>
+    <div class="fgroup full"><label class="fl">Descrizione</label><input type="text" id="em-cos-desc" value="${k.descrizione||k.desc||''}"></div>
+    <div class="fgroup"><label class="fl">Importo (€)</label><input type="number" id="em-cos-imp" step="0.01" value="${k.imp||''}"></div>
+  </div>`;
+  openEdit('Modifica <em>Costo</em>','// '+( k.descrizione||k.desc||k.tipo),body,{type:'cos',id});
+}
+
+function saveEditCos(id){
+  const idx=cos.findIndex(x=>x.id===id);if(idx<0)return;
+  const data=document.getElementById('em-cos-data').value||today();
+  const tipo=document.getElementById('em-cos-tipo').value;
+  const descrizione=document.getElementById('em-cos-desc').value.trim();
+  const imp=parseFloat(document.getElementById('em-cos-imp').value);
+  if(!descrizione||isNaN(imp)){toast('Compila tutti i campi',true);return;}
+  cos[idx]={...cos[idx],data,tipo,descrizione,imp};
+  save();rendCos();updDash();
+  if(SB_TOKEN) cUpsert('costi',cos[idx]);
+  closeEdit();
+  toast('Costo aggiornato ✓');
 }
 function delCos(id){if(!confirm("Eliminare?"))return;const r=cos.find(k=>k.id===id);cos=cos.filter(k=>k.id!==id);save();rendCos();toast("Eliminato");if(r)cDelete("costi",id,r.sb_id);}
 
@@ -2183,7 +2208,7 @@ function xirr(flows, guess=0.1){
   return r;
 }
 
-function buildFlows(fAcq, fVen, fCed, fCos, inclComm, inclTax, inclCos, mktVal, inclTaxLat, taxLat, inclCommLat, commLat){
+function buildFlows(fAcq, fVen, fCed, fCos, inclComm, inclTax, mktVal, inclTaxLat, taxLat, inclCommLat, commLat){
   const flows=[];
   const dt=s=>new Date(s).getTime();
 
@@ -2210,10 +2235,13 @@ function buildFlows(fAcq, fVen, fCed, fCos, inclComm, inclTax, inclCos, mktVal, 
     flows.push({date:dt(v.data),amount:amt});
   });
 
-  // USCITE: costi gestione
-  if(inclCos){
-    fCos.forEach(k=>flows.push({date:dt(k.data),amount:-(+k.imp||0)}));
-  }
+  // USCITE: costi gestione — commissioni col toggle comm, imposte col toggle tax, altro sempre
+  fCos.forEach(k=>{
+    const tipo=k.tipo||'altro';
+    if(tipo==='commissione'&&!inclComm) return;
+    if(tipo==='imposta'&&!inclTax) return;
+    flows.push({date:dt(k.data),amount:-(+k.imp||0)});
+  });
 
   // VALORE ATTUALE come flusso finale oggi (al netto di imposte e commissioni latenti)
   if(mktVal&&mktVal>0){
@@ -2263,7 +2291,7 @@ function calcDuration(fAcq, fVen){
 function updMetrics(){
   const inclComm   =document.getElementById('tog-comm').checked;
   const inclTax    =document.getElementById('tog-tax').checked;
-  const inclCos    =document.getElementById('tog-cos').checked;
+
   const inclTaxLat =document.getElementById('tog-tax-lat').checked;
   const inclCommLat=document.getElementById('tog-comm-lat').checked;
   const infl       =(parseFloat(document.getElementById('infl-rate').value)||0)/100;
@@ -2304,7 +2332,7 @@ function updMetrics(){
   }
 
   // 2. XIRR
-  const flows=buildFlows(fAcq,fVen,fCed,fCos,inclComm,inclTax,inclCos,mktVal,inclTaxLat,taxLat,inclCommLat,commLat);
+  const flows=buildFlows(fAcq,fVen,fCed,fCos,inclComm,inclTax,mktVal,inclTaxLat,taxLat,inclCommLat,commLat);
   const mXirr=document.getElementById('m-xirr');
   const mXirrReal=document.getElementById('m-xirr-real');
 
@@ -2413,9 +2441,15 @@ function updDashKPI(){
   // Leggi toggle dalla filter bar
   const inclComm    = document.getElementById('tog-comm')?.checked!==false;
   const inclTax     = document.getElementById('tog-tax')?.checked!==false;
-  const inclCos     = document.getElementById('tog-cos')?.checked!==false;
   const inclTaxLat  = document.getElementById('tog-tax-lat')?.checked!==false;
   const inclCommLat = document.getElementById('tog-comm-lat')?.checked!==false;
+
+  // Costi di mantenimento: commissioni e imposte separati per tipo
+  const cosComm = cos.filter(k=>k.tipo==='commissione').reduce((s,k)=>s+(+k.imp||0),0);
+  const cosImp  = cos.filter(k=>k.tipo==='imposta').reduce((s,k)=>s+(+k.imp||0),0);
+  const cosAltro= cos.filter(k=>k.tipo!=='commissione'&&k.tipo!=='imposta').reduce((s,k)=>s+(+k.imp||0),0);
+  // Totale costi per il calcolo Net Return (commissioni + imposte + altro)
+  const totCos = (inclComm?cosComm:0) + (inclTax?cosImp:0) + cosAltro;
 
   const totInv = filteredAcq.reduce((s,a)=>{
     let v=+a.prezzo*+a.qty;
@@ -2435,8 +2469,6 @@ function updDashKPI(){
     if(inclTax)  net-=(+v.tax||0);
     return s+net;
   },0);
-  const totCos = inclCos ? cos.reduce((s,k)=>s+k.imp,0) : 0;
-  const totCosAll = cos.reduce((s,k)=>s+k.imp,0);
   const plVen  = filteredVen.reduce((s,v)=>s+v.pl,0);
   const minR   = getMinus();
 
@@ -2469,22 +2501,14 @@ function updDashKPI(){
   setHid('mkt-tax-lat', anyPrice?(inclTaxLat?totTaxLatRaw:0):'');
   setHid('mkt-comm-lat',anyPrice?(inclCommLat?totCommLatRaw:0):'');
 
-  // Capitale investito → accanto a duration
+  // Capitale investito
   const capInvEl=document.getElementById('m-cap-inv');
   if(capInvEl){capInvEl.textContent=E(totInv);}
 
-  // Costi di mantenimento (tog-cos)
-  const costiManEl=document.getElementById('m-costi-man');
-  if(costiManEl){
-    costiManEl.textContent=inclCos?E(totCosAll):'—';
-    costiManEl.style.color=inclCos?'var(--red)':'var(--text3)';
-    costiManEl.style.opacity=inclCos?'1':'0.4';
-  }
-
-  // Commissioni REALIZZATE (tog-comm) + LATENTI (tog-comm-lat)
+  // Commissioni: acquisti + vendite + costi tipo commissione + latenti
   const commAcqFilt=filteredAcq.reduce((s,a)=>s+(+a.comm||0),0);
   const commVenFilt=filteredVen.reduce((s,v)=>s+(+v.comm||0),0);
-  const totCommReal=commAcqFilt+commVenFilt;
+  const totCommReal=commAcqFilt+commVenFilt+(inclComm?cosComm:0);
   const totCommLat2=inclCommLat?totCommLatRaw:0;
   const totCommTot=(inclComm?totCommReal:0)+totCommLat2;
   const commEl=document.getElementById('m-comm-tot');
@@ -2495,12 +2519,11 @@ function updDashKPI(){
     commEl.style.opacity=hasSomething?'1':'0.4';
   }
 
-  // Tasse REALIZZATE (tog-tax): Tobin + cedole + vendite
-  // Tasse LATENTI (tog-tax-lat): imposte su plusvalenze non realizzate
+  // Tasse: Tobin + cedole + vendite + costi tipo imposta + latenti
   const tobinFilt  =filteredAcq.reduce((s,a)=>s+(+a.tobin||0),0);
   const taxCedFilt =filteredCed.reduce((s,c)=>s+(+c.tax||0),0);
   const taxVenFilt =filteredVen.reduce((s,v)=>s+(+v.tax||0),0);
-  const totTaxReal =tobinFilt+taxCedFilt+taxVenFilt;
+  const totTaxReal =tobinFilt+taxCedFilt+taxVenFilt+(inclTax?cosImp:0);
   const totTaxLat2 =inclTaxLat?totTaxLatRaw:0;
   const totTaxTot  =(inclTax?totTaxReal:0)+totTaxLat2;
   const taxEl=document.getElementById('m-tax-tot');
