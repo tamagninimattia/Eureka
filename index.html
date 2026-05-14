@@ -739,6 +739,19 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
             </select>
           </div>
           <div class="fgroup full"><label class="fl">Note</label><input type="text" id="an-note" placeholder="es. Accumulation · Hedged · UCITS · scadenza 2030…"></div>
+          <div class="fgroup full" style="align-items:center;gap:14px;display:flex;flex-wrap:wrap;">
+            <label class="toggle-wrap" style="margin:0;">
+              <input type="checkbox" id="an-has-chart" onchange="onAnChartToggle()">
+              <span class="toggle-pill"></span>
+              <span style="font-family:var(--mono);font-size:11px;color:var(--text2);">Grafico TradingView disponibile</span>
+            </label>
+            <div id="an-chart-sym-wrap" style="display:none;flex:1;">
+              <input type="text" id="an-chart-sym" placeholder="es. MIL:ENI · NASDAQ:AAPL · EURONEXT:IWRD" style="width:100%;">
+            </div>
+          </div>
+        </div>
+        <div class="abox info" id="an-chart-hint" style="display:none;margin:0 0 12px;">
+          Il simbolo TradingView è nel formato <strong>BORSA:TICKER</strong> — es. <code>MIL:ENI</code> per Borsa Italiana, <code>NASDAQ:AAPL</code> per Apple, <code>EURONEXT:IWRD</code> per ETF europei.
         </div>
         <div class="fa"><button class="btn" onclick="addAnagrafica()">+ Aggiungi titolo</button></div>
       </div>
@@ -988,6 +1001,11 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
 </div>
 
 </div><!-- /app-shell -->
+
+<!-- CHART POPUP -->
+<div id="chart-popup" style="display:none;position:fixed;z-index:9000;background:var(--bg1);border:1px solid var(--border2);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.5);overflow:hidden;width:520px;height:320px;pointer-events:none;">
+  <iframe id="chart-iframe" src="" style="width:100%;height:100%;border:none;" loading="lazy"></iframe>
+</div>
 <div class="toast" id="toast"><div class="toast-dot"></div><span id="toast-msg"></span></div>
 
 <script>
@@ -1444,7 +1462,40 @@ function tipoBadge(tipo){
   return `<span class="badge ${map[tipo]||'t-other'}">${tipo||'—'}</span>`;
 }
 
-/* ══ RICERCA YAHOO FINANCE ══ */
+function onAnChartToggle(){
+  const cb=document.getElementById('an-has-chart');
+  const wrap=document.getElementById('an-chart-sym-wrap');
+  const hint=document.getElementById('an-chart-hint');
+  if(wrap) wrap.style.display=cb?.checked?'flex':'none';
+  if(hint) hint.style.display=cb?.checked?'block':'none';
+  // Auto-suggerisci il simbolo TV dal ticker Yahoo
+  if(cb?.checked){
+    const ticker=document.getElementById('an-ticker')?.value.trim().toUpperCase();
+    const sym=document.getElementById('an-chart-sym');
+    if(sym&&ticker&&!sym.value){
+      sym.value=yahooToTVSymbol(ticker);
+    }
+  }
+}
+
+function yahooToTVSymbol(yahooTicker){
+  if(!yahooTicker) return '';
+  // Mappatura suffissi Yahoo → prefissi TradingView
+  const map={
+    '.MI':'MIL','.PA':'EURONEXT','.AS':'EURONEXT','.BR':'EURONEXT',
+    '.L':'LSE','.F':'FWB','.DE':'XETRA','.SW':'SIX',
+    '.TO':'TSX','.AX':'ASX','.HK':'HKEX','.T':'TSE'
+  };
+  for(const[suffix,exchange] of Object.entries(map)){
+    if(yahooTicker.endsWith(suffix)){
+      return `${exchange}:${yahooTicker.slice(0,-suffix.length)}`;
+    }
+  }
+  // Ticker senza suffisso → probabilmente USA, prova NASDAQ prima
+  return `NASDAQ:${yahooTicker}`;
+}
+
+
 let _yfTimer=null;
 
 function onYfSearchInput(){
@@ -1530,32 +1581,42 @@ function addAnagrafica(){
   const settore=document.getElementById('an-settore').value;
   const valuta=document.getElementById('an-valuta').value;
   const note=document.getElementById('an-note').value.trim();
+  const hasChart=document.getElementById('an-has-chart')?.checked||false;
+  const chartSym=hasChart?(document.getElementById('an-chart-sym')?.value.trim()||''):'';
   if(!nome){toast('Il nome è obbligatorio',true);return;}
-  // check duplicato ISIN
   if(isin&&ana.find(a=>a.isin===isin)){toast('ISIN già presente in anagrafica',true);return;}
-  ana.push({id:Date.now(),nome,isin,ticker,mercato,tipo,settore,valuta,note});
-  save();rendAna();fillAnaSelect();toast('Titolo aggiunto all\'anagrafica ✓');
-  ['an-nome','an-isin','an-ticker','an-mercato','an-note'].forEach(id=>document.getElementById(id).value='');
+  const rec={id:Date.now(),nome,isin,ticker,mercato,tipo,settore,valuta,note,hasChart,chartSym};
+  ana.push(rec);
+  save();rendAna();fillAnaSelect();
+  cUpsert('anagrafica',rec);
+  toast('Titolo aggiunto all\'anagrafica ✓');
+  ['an-nome','an-isin','an-ticker','an-mercato','an-note','an-chart-sym'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('an-tipo').value='';document.getElementById('an-settore').value='';document.getElementById('an-valuta').value='EUR';
+  if(document.getElementById('an-has-chart')) document.getElementById('an-has-chart').checked=false;
+  onAnChartToggle();
 }
 
 function rendAna(){
   const tb=document.getElementById('tb-ana');
-  if(!ana.length){tb.innerHTML='<tr><td colspan="9" class="empty">Nessun titolo in anagrafica</td></tr>';return;}
-  tb.innerHTML=ana.map(a=>`<tr>
-    <td class="td-n">${a.nome}</td>
-    <td style="font-size:11px;color:var(--text2)">${a.isin||'—'}</td>
-    <td class="gold">${a.ticker||'—'}</td>
-    <td class="muted">${a.mercato||'—'}</td>
-    <td>${tipoBadge(a.tipo)}</td>
-    <td class="muted" style="font-size:11px">${a.settore||'—'}</td>
-    <td class="muted">${a.valuta||'—'}</td>
-    <td class="muted" style="font-size:11px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.note||'—'}</td>
-    <td style="white-space:nowrap">
-      <button class="btn-edit" onclick="editAna(${a.id})">✎</button>
-      <button class="btn-del" onclick="delAna(${a.id})">✕</button>
-    </td>
-  </tr>`).join('');
+  if(!ana.length){tb.innerHTML='<tr><td colspan="10" class="empty">Nessun titolo in anagrafica</td></tr>';return;}
+  tb.innerHTML=ana.map(a=>{
+    const chartIcon=a.hasChart?`<span title="${a.chartSym||''}" style="color:var(--green);font-size:14px;">📈</span>`:'<span style="color:var(--text3);font-size:11px;">—</span>';
+    return `<tr>
+      <td class="td-n">${a.nome}</td>
+      <td style="font-size:11px;color:var(--text2)">${a.isin||'—'}</td>
+      <td class="gold">${a.ticker||'—'}</td>
+      <td class="muted">${a.mercato||'—'}</td>
+      <td>${tipoBadge(a.tipo)}</td>
+      <td class="muted" style="font-size:11px">${a.settore||'—'}</td>
+      <td class="muted">${a.valuta||'—'}</td>
+      <td class="muted" style="font-size:11px;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.note||'—'}</td>
+      <td style="text-align:center;">${chartIcon}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-edit" onclick="editAna(${a.id})">✎</button>
+        <button class="btn-del" onclick="delAna(${a.id})">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 function editAna(id){
@@ -1573,9 +1634,32 @@ function editAna(id){
     <div class="fgroup"><label class="fl">Settore</label><select id="em-settore">${selOpts(SETTORI,a.settore||'')}</select></div>
     <div class="fgroup"><label class="fl">Valuta</label><select id="em-valuta">${selOpts(VALUTE,a.valuta||'EUR')}</select></div>
     <div class="fgroup full"><label class="fl">Note</label><input type="text" id="em-note" value="${a.note||''}"></div>
+    <div class="fgroup full" style="align-items:center;gap:14px;display:flex;flex-wrap:wrap;">
+      <label class="toggle-wrap" style="margin:0;">
+        <input type="checkbox" id="em-has-chart" ${a.hasChart?'checked':''} onchange="onEmChartToggle()">
+        <span class="toggle-pill"></span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--text2);">Grafico TradingView disponibile</span>
+      </label>
+      <div id="em-chart-sym-wrap" style="display:${a.hasChart?'flex':'none'};flex:1;">
+        <input type="text" id="em-chart-sym" value="${a.chartSym||''}" placeholder="es. MIL:ENI · NASDAQ:AAPL" style="width:100%;">
+      </div>
+    </div>
   </div>
   <div class="abox info" style="margin-top:12px;">ℹ Le modifiche verranno propagate automaticamente a tutti gli acquisti, cedole e vendite relativi a questo titolo.</div>`;
   openEdit('Modifica <em>Anagrafica</em>','// '+a.nome,body,{type:'ana',id});
+}
+
+function onEmChartToggle(){
+  const cb=document.getElementById('em-has-chart');
+  const wrap=document.getElementById('em-chart-sym-wrap');
+  if(wrap) wrap.style.display=cb?.checked?'flex':'none';
+  if(cb?.checked){
+    const sym=document.getElementById('em-chart-sym');
+    if(sym&&!sym.value){
+      const ticker=document.getElementById('em-ticker')?.value.trim().toUpperCase();
+      if(ticker) sym.value=yahooToTVSymbol(ticker);
+    }
+  }
 }
 
 function saveEditAna(id){
@@ -1583,6 +1667,8 @@ function saveEditAna(id){
   const nome=document.getElementById('em-nome').value.trim();
   if(!nome){toast('Il nome è obbligatorio',true);return;}
   const vecchio=ana[idx];
+  const hasChart=document.getElementById('em-has-chart')?.checked||false;
+  const chartSym=hasChart?(document.getElementById('em-chart-sym')?.value.trim()||''):'';
   const nuovo={
     ...vecchio,
     nome,
@@ -1593,6 +1679,7 @@ function saveEditAna(id){
     settore:document.getElementById('em-settore').value,
     valuta:document.getElementById('em-valuta').value,
     note:document.getElementById('em-note').value.trim(),
+    hasChart,chartSym,
   };
   ana[idx]=nuovo;
 
@@ -2384,8 +2471,20 @@ function recalcPortRow(key){
   const comm=getGlobalComm();
   const esc=CSS.escape(key);
 
-  const ctvEl=document.getElementById('pc-ctv-'+esc);
-  if(!ctvEl) return;
+  const titEl=document.getElementById('port-tit-'+esc);
+  if(titEl){
+    const anEntry=ana.find(a=>a.isin===key||a.nome===p.titolo);
+    const chartSym=anEntry?.hasChart&&anEntry?.chartSym?anEntry.chartSym:'';
+    const link=p.ticker
+      ? '<a href="https://finance.yahoo.com/quote/'+encodeURIComponent(p.ticker)+'" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;border-bottom:1px dashed var(--text3);" onmouseover="this.style.color=\'var(--gold)\'" onmouseout="this.style.color=\'var(--text)\'">'+p.titolo+'</a>'
+      : p.titolo;
+    const icon=chartSym
+      ? '<span onmouseenter="showChartPopup(this,\''+chartSym+'\')" onmouseleave="hideChartPopup()" style="cursor:pointer;margin-left:6px;font-size:13px;opacity:0.7;" onmouseover="this.style.opacity=\'1\'" onmouseout="this.style.opacity=\'0.7\'">📈</span>'
+      : '';
+    titEl.innerHTML=link+icon;
+  }
+
+
 
   if(prez===null){
     ctvEl.textContent='—'; ctvEl.className='td-calc';
@@ -2651,10 +2750,7 @@ function updDash(){
           ondrop="onPortDrop(event)"
           ondragend="onPortDragEnd(event)">
         <td><span class="drag-handle" title="Trascina per riordinare">⠿</span></td>
-        <td class="td-n">${p.ticker
-          ? `<a href="https://finance.yahoo.com/quote/${encodeURIComponent(p.ticker)}" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;border-bottom:1px dashed var(--text3);transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='var(--gold)';this.style.borderColor='var(--gold)'" onmouseout="this.style.color='var(--text)';this.style.borderColor='var(--text3)'">${p.titolo}</a>`
-          : p.titolo
-        }</td>
+        <td class="td-n" id="port-tit-${esc}">—</td>
         <td class="gold" style="font-size:15px;font-weight:600;">${E(p.costo)}</td>
         <td>
           <span style="font-family:var(--mono);font-size:13px;color:var(--text);">${prezVal!==''?E(+prezVal,4):'—'}</span>
@@ -3241,7 +3337,54 @@ async function fetchPricesFromFinnhub(){
   }
 }
 
-/* ── AUTO-REFRESH PREZZI ── */
+/* ── CHART POPUP (TradingView) ── */
+let _chartHideTimer=null;
+
+function showChartPopup(el, sym){
+  clearTimeout(_chartHideTimer);
+  const popup=document.getElementById('chart-popup');
+  const iframe=document.getElementById('chart-iframe');
+  if(!popup||!iframe) return;
+
+  // Posizione: sopra o sotto l'icona in base allo spazio disponibile
+  const rect=el.getBoundingClientRect();
+  const popW=520, popH=320, margin=8;
+  let top=rect.bottom+margin;
+  let left=rect.left;
+  if(top+popH>window.innerHeight-20) top=rect.top-popH-margin;
+  if(left+popW>window.innerWidth-20) left=window.innerWidth-popW-20;
+  if(left<8) left=8;
+
+  popup.style.top=top+'px';
+  popup.style.left=left+'px';
+  popup.style.display='block';
+  popup.style.pointerEvents='auto';
+
+  // Carica il widget TradingView solo se sym è cambiato
+  const tvUrl=`https://www.tradingview.com/widgetembed/?symbol=${encodeURIComponent(sym)}&interval=D&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=F1F3F6&studies=[]&theme=dark&style=1&timezone=Europe%2FRome&withdateranges=1&showpopupbutton=0&locale=it&utm_source=eureka`;
+  if(iframe.dataset.sym!==sym){
+    iframe.src=tvUrl;
+    iframe.dataset.sym=sym;
+  }
+}
+
+function hideChartPopup(){
+  _chartHideTimer=setTimeout(()=>{
+    const popup=document.getElementById('chart-popup');
+    if(popup) popup.style.display='none';
+  }, 300);
+}
+
+// Mantieni popup aperto se ci si sposta sopra con il mouse
+document.addEventListener('DOMContentLoaded',()=>{
+  const popup=document.getElementById('chart-popup');
+  if(popup){
+    popup.addEventListener('mouseenter',()=>clearTimeout(_chartHideTimer));
+    popup.addEventListener('mouseleave',()=>hideChartPopup());
+  }
+});
+
+
 let _autoRefreshTimer = null;
 const AUTO_REFRESH_INTERVAL = 60; // secondi
 
