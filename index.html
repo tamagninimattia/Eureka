@@ -2217,7 +2217,8 @@ function buildFlows(fAcq, fVen, fCed, fCos, inclComm, inclTax, mktVal, inclTaxLa
   // USCITE: acquisti
   fAcq.forEach(a=>{
     let amt=+a.prezzo*+a.qty;
-    if(inclComm) amt+=(+a.tobin||0)+(+a.comm||0);
+    if(inclComm) amt+=(+a.comm||0);
+    if(inclTax)  amt+=(+a.tobin||0);
     flows.push({date:dt(a.data),amount:-amt});
   });
 
@@ -2458,7 +2459,8 @@ function updDashKPI(){
 
   const totInv = filteredAcq.reduce((s,a)=>{
     let v=+a.prezzo*+a.qty;
-    if(inclComm) v+=(+a.tobin||0)+(+a.comm||0);
+    if(inclComm) v+=(+a.comm||0);
+    if(inclTax)  v+=(+a.tobin||0);
     return s+v;
   },0);
   const totCed = filteredCed.reduce((s,c)=>{
