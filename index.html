@@ -327,6 +327,54 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
   div[style*="grid-template-columns:1fr 1fr 1fr 1fr"]{grid-template-columns:1fr!important;}
   .toggle-wrap span:not(.toggle-pill){font-size:10px;}
 }
+
+/* ═══════════════════════════════════════
+   MOBILE LAYOUT — max-width: 768px
+   Desktop rimane identico sopra i 769px
+   ═══════════════════════════════════════ */
+@media(max-width:768px){
+  #app-shell{flex-direction:column;}
+  .sidebar{display:none!important;}
+  .main{padding:12px 12px 74px;overflow-x:hidden;}
+  .ph{padding:12px 0 8px;}
+  .ph-title{font-size:20px;}
+  .ph-sub{display:none;}
+  /* Bottom nav */
+  #mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:62px;background:var(--bg1);border-top:1px solid var(--border2);z-index:1000;align-items:stretch;padding-bottom:env(safe-area-inset-bottom,0px);}
+  #mobile-nav .mn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:transparent;border:none;cursor:pointer;color:var(--text3);font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:0.05em;transition:color 0.15s;padding:8px 2px;position:relative;}
+  #mobile-nav .mn-item.active{color:var(--gold);}
+  #mobile-nav .mn-item.active::before{content:'';position:absolute;top:0;left:15%;right:15%;height:2px;background:var(--gold);border-radius:0 0 2px 2px;}
+  #mobile-nav .mn-ico{font-size:19px;line-height:1;}
+  /* Nasconde elementi desktop-only */
+  .mob-hide{display:none!important;}
+  .tw{display:none!important;}
+  /* Form touch */
+  .fgroup input,.fgroup select{font-size:16px!important;padding:12px 14px!important;min-height:48px;}
+  .btn{min-height:48px;font-size:15px!important;width:100%;justify-content:center;}
+  .fa{flex-direction:column;}
+  /* Portafoglio mobile list */
+  #mob-port-list{display:flex;flex-direction:column;background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+  .mob-port-row{display:grid;grid-template-columns:1fr 70px 62px 80px;align-items:center;gap:6px;padding:11px 12px;border-bottom:1px solid var(--border);}
+  .mob-port-row:last-child{border-bottom:none;}
+  .mob-port-row.header{background:var(--bg2);font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);padding:7px 12px;}
+  .mob-port-row.total{background:var(--bg2);}
+  .mob-tit{font-family:var(--sans);font-size:13px;color:var(--text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mob-prez{font-family:var(--mono);font-size:12px;color:var(--text);text-align:right;}
+  .mob-var{font-family:var(--mono);font-size:11px;text-align:right;padding:2px 5px;border-radius:4px;white-space:nowrap;}
+  .mob-var.pos{color:var(--green);background:rgba(52,201,126,0.1);}
+  .mob-var.neg{color:var(--red);background:rgba(224,84,112,0.1);}
+  .mob-ctv{font-family:var(--mono);font-size:12px;color:var(--gold);font-weight:600;text-align:right;white-space:nowrap;}
+  /* Metriche mobile: 3 card in colonna */
+  #mob-metrics{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
+  #mob-metrics .metric-card{padding:14px 16px;}
+  /* Card standard */
+  .card{margin-bottom:12px;}
+}
+@media(min-width:769px){
+  #mobile-nav{display:none!important;}
+  #mob-port-list{display:none!important;}
+  #mob-metrics{display:none!important;}
+}
 </style>
 </head>
 <body>
@@ -345,6 +393,15 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
     </div>
   </div>
 </div>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav id="mobile-nav">
+  <button class="mn-item active" onclick="swMob('dashboard',this)"><div class="mn-ico">◈</div><span>Home</span></button>
+  <button class="mn-item" onclick="swMob('portafoglio',this)"><div class="mn-ico">📊</div><span>Portfolio</span></button>
+  <button class="mn-item" onclick="swMob('acquisti',this)"><div class="mn-ico">↓</div><span>Movimenti</span></button>
+  <button class="mn-item" onclick="swMob('cedole',this)"><div class="mn-ico">◎</div><span>Cedole</span></button>
+  <button class="mn-item" onclick="swMob('altro',this)"><div class="mn-ico">☰</div><span>Altro</span></button>
+</nav>
 
 <!-- APP SHELL -->
 <div id="app-shell" style="display:flex;width:100%;min-height:100vh;">
@@ -482,7 +539,37 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
         </div>
       </div>
 
-      <!-- 1. PORTAFOGLIO -->
+      <!-- ═══ MOBILE ONLY: 3 card metriche ═══ -->
+      <div id="mob-metrics">
+        <!-- Net Liquidation Value -->
+        <div class="metric-card" style="background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);"></div>
+          <div style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--green);font-weight:700;margin-bottom:8px;">Net Liquidation Value</div>
+          <div id="mob-net-liq" style="font-family:var(--serif);font-size:36px;color:var(--green);line-height:1;letter-spacing:-0.02em;">—</div>
+        </div>
+        <!-- TIR Reale -->
+        <div id="mob-cell-tir" class="metric-card" style="position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);transition:background 0.3s,border-color 0.3s;">
+          <div id="mob-line-tir" style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);"></div>
+          <div id="mob-label-tir" style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;margin-bottom:8px;color:var(--green);">TIR reale</div>
+          <div id="mob-xirr-real" style="font-family:var(--serif);font-size:36px;line-height:1;letter-spacing:-0.02em;color:var(--green);"></div>
+        </div>
+        <!-- Net Return -->
+        <div id="mob-cell-return" class="metric-card" style="position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);transition:background 0.3s,border-color 0.3s;">
+          <div id="mob-line-return" style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);"></div>
+          <div id="mob-label-return" style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;margin-bottom:8px;color:var(--green);">Net Return</div>
+          <div id="mob-risultato" style="font-family:var(--serif);font-size:36px;line-height:1;letter-spacing:-0.02em;color:var(--green);">—</div>
+        </div>
+      </div>
+
+      <!-- ═══ MOBILE ONLY: Portafoglio compatto ═══ -->
+      <div id="mob-port-list">
+        <div class="mob-port-row header">
+          <span>Titolo</span><span style="text-align:right;">Prezzo</span><span style="text-align:right;">Var%</span><span style="text-align:right;">Ctv.</span>
+        </div>
+        <div id="mob-port-body"></div>
+      </div>
+
+      <!-- FINE MOBILE ONLY -->
       <div class="card" style="overflow-x:auto;">
         <div class="ch">
           <div class="ch-left"><div class="ch-ico">◈</div><div class="ch-title">Portafoglio</div></div>
@@ -2367,6 +2454,7 @@ function updMetrics(){
   const rReal=(1+r)/(1+infl)-1;
   if(mXirrReal) mXirrReal.textContent=pct(rReal);
   setHeroCell('cell-tir-reale','label-tir-reale','m-xirr-real',rReal,true);
+  updMobKPI();
 }
 
 function aggiornaRigaTotale(tit){
@@ -2587,6 +2675,7 @@ function updDashKPI(){
   // Aggiorna metriche XIRR e torta
   updMetrics();
   drawPie();
+  updMobKPI();
 }
 
 /* ══ DASHBOARD ══ */
@@ -3515,7 +3604,121 @@ function initApp(){
   });
 }
 
-/* ── BOOT ── */
+/* ── MOBILE NAVIGATION ── */
+const isMobile=()=>window.innerWidth<=768;
+
+function swMob(name,btn){
+  if(!isMobile()){return;}
+  // Su mobile gestiamo tab speciali
+  const tabMap={
+    dashboard:'dashboard',
+    portafoglio:'dashboard', // mostra dashboard con focus su portafoglio
+    acquisti:'acquisti',
+    cedole:'cedole',
+    altro:'anagrafica'
+  };
+  const target=tabMap[name]||name;
+  // Attiva tab desktop
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  const tabEl=document.getElementById('tab-'+target);
+  if(tabEl) tabEl.classList.add('active');
+  // Aggiorna bottom nav
+  document.querySelectorAll('#mobile-nav .mn-item').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  // Se portafoglio: scrolla alla lista mobile
+  if(name==='portafoglio'){
+    setTimeout(()=>{
+      const el=document.getElementById('mob-port-list');
+      if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+    },100);
+  }
+  // Aggiorna dati
+  if(target==='dashboard'){buildFilterChips();updDash();}
+  if(target==='cedole'||target==='vendite') fillSelects();
+  if(target==='acquisti') fillAnaSelect();
+  if(target==='anagrafica') rendAna();
+}
+
+function updMobKPI(){
+  if(!isMobile()) return;
+  // Net Liquidation Value
+  const nlv=document.getElementById('mkt-net-liq');
+  const mobNlv=document.getElementById('mob-net-liq');
+  if(mobNlv&&nlv) mobNlv.textContent=nlv.textContent;
+
+  // TIR reale
+  const tir=document.getElementById('m-xirr-real');
+  const mobTir=document.getElementById('mob-xirr-real');
+  const mobCellTir=document.getElementById('mob-cell-tir');
+  const mobLblTir=document.getElementById('mob-label-tir');
+  const mobLineTir=document.getElementById('mob-line-tir');
+  if(mobTir&&tir){
+    mobTir.textContent=tir.textContent;
+    mobTir.style.color=tir.style.color||'var(--green)';
+    if(mobLblTir) mobLblTir.style.color=tir.style.color||'var(--green)';
+    if(mobCellTir){
+      mobCellTir.style.background=tir.style.color==='var(--red)'?'rgba(224,84,112,0.06)':'rgba(52,201,126,0.06)';
+      mobCellTir.style.borderColor=tir.style.color==='var(--red)'?'rgba(224,84,112,0.2)':'rgba(52,201,126,0.2)';
+    }
+    if(mobLineTir) mobLineTir.style.background=`linear-gradient(90deg,transparent,${tir.style.color||'var(--green)'},transparent)`;
+  }
+
+  // Net Return
+  const ret=document.getElementById('m-risultato-netto');
+  const mobRet=document.getElementById('mob-risultato');
+  const mobCellRet=document.getElementById('mob-cell-return');
+  const mobLblRet=document.getElementById('mob-label-return');
+  const mobLineRet=document.getElementById('mob-line-return');
+  if(mobRet&&ret){
+    mobRet.textContent=ret.textContent;
+    mobRet.style.color=ret.style.color||'var(--green)';
+    if(mobLblRet) mobLblRet.style.color=ret.style.color||'var(--green)';
+    if(mobCellRet){
+      mobCellRet.style.background=ret.style.color==='var(--red)'?'rgba(224,84,112,0.06)':'rgba(52,201,126,0.06)';
+      mobCellRet.style.borderColor=ret.style.color==='var(--red)'?'rgba(224,84,112,0.2)':'rgba(52,201,126,0.2)';
+    }
+    if(mobLineRet) mobLineRet.style.background=`linear-gradient(90deg,transparent,${ret.style.color||'var(--green)'},transparent)`;
+  }
+
+  // Portafoglio mobile list
+  updMobPort();
+}
+
+function updMobPort(){
+  const body=document.getElementById('mob-port-body');
+  if(!body) return;
+  const port=getPort();
+  const tit=Object.values(port).filter(p=>p.qty>0&&filterKey(p.isin||p.titolo));
+  if(!tit.length){
+    body.innerHTML='<div class="mob-port-row"><span style="color:var(--text3);font-size:12px;grid-column:1/-1;">Nessuna posizione aperta</span></div>';
+    return;
+  }
+  let totCtv=0, anyCtv=false;
+  body.innerHTML=tit.map(p=>{
+    const key=p.isin||p.titolo;
+    const pp=portPrices[key]&&typeof portPrices[key]==='object'?portPrices[key]:{};
+    const prez=pp.prez!=null&&pp.prez!==''?+pp.prez:null;
+    const changePct=pp.changePct??null;
+    const ctv=prez!=null?prez*p.qty:null;
+    if(ctv!=null){totCtv+=ctv;anyCtv=true;}
+    const isPos=changePct!=null&&changePct>=0;
+    const sign=changePct!=null?(changePct>=0?'+':''):'';
+    return `<div class="mob-port-row">
+      <span class="mob-tit">${p.titolo}</span>
+      <span class="mob-prez">${prez!=null?E(prez,2):'—'}</span>
+      <span class="mob-var ${changePct!=null?(isPos?'pos':'neg'):''}">${changePct!=null?sign+changePct.toFixed(2)+'%':'—'}</span>
+      <span class="mob-ctv">${ctv!=null?E(ctv):'—'}</span>
+    </div>`;
+  }).join('');
+  // Riga totale
+  body.innerHTML+=`<div class="mob-port-row total">
+    <span style="font-family:var(--mono);font-size:10px;color:var(--text2);text-transform:uppercase;">Totale</span>
+    <span></span><span></span>
+    <span class="mob-ctv" style="font-size:13px;">${anyCtv?E(totCtv):'—'}</span>
+  </div>`;
+}
+
+
 document.addEventListener('DOMContentLoaded',async()=>{
   // Prova a ripristinare la sessione dal refresh token
   if(SB_TOKEN&&SB_UID){
