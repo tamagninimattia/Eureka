@@ -335,13 +335,15 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
 @media(max-width:768px){
   #app-shell{flex-direction:column;}
   .sidebar{display:none!important;}
-  /* Padding laterale zero — full width */
-  .main{padding:0 0 74px;overflow-x:hidden;width:100%;box-sizing:border-box;}
-  .ph{display:none;}
+  /* Padding laterale zero — full width, no horizontal scroll */
+  .main{padding:0 0 74px;overflow-x:hidden;width:100%;box-sizing:border-box;max-width:100vw;}
+  /* Elimina scroll orizzontale globalmente */
+  *{max-width:100%;box-sizing:border-box;}
   /* Nasconde TUTTO il contenuto desktop della dashboard */
   #mob-dash-hide{display:none!important;}
-  /* Nasconde filtri */
-  .filter-bar,.metric-panel{display:none!important;}
+  /* Nasconde header di pagina (ph) e padding content in tutte le tab */
+  .ph{display:none!important;}
+  .content{padding:12px 12px 0!important;}
   /* Bottom nav */
   #mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:62px;background:var(--bg1);border-top:1px solid var(--border2);z-index:1000;align-items:stretch;padding-bottom:env(safe-area-inset-bottom,0px);}
   #mobile-nav .mn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:transparent;border:none;cursor:pointer;color:var(--text3);font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:0.05em;transition:color 0.15s;padding:8px 2px;position:relative;}
