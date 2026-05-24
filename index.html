@@ -1214,6 +1214,13 @@ function rendDossier(){
       ${dos.length>1?`<button class="btn-del" onclick="delDossier(${d.id})">✕</button>`:''}
     </div>`).join('');
   console.log('[DOSS] innerHTML scritto, lunghezza:', list.innerHTML.length);
+  // Debug stili computati
+  const tab=document.getElementById('tab-dossier');
+  const cont=tab?.querySelector('.content');
+  console.log('[DOSS] tab display:', window.getComputedStyle(tab||document.body).display);
+  console.log('[DOSS] content display:', window.getComputedStyle(cont||document.body).display);
+  console.log('[DOSS] list display:', window.getComputedStyle(list).display);
+  console.log('[DOSS] tab offsetHeight:', tab?.offsetHeight, 'list offsetHeight:', list.offsetHeight);
 }
 
 function countDossierMovimenti(id){
