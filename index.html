@@ -47,7 +47,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;back
 .ph-sub{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.14em;text-transform:uppercase;margin-top:7px;}
 .content{padding:0 36px 36px;flex:1;}
 .tab-content{display:none;}
-.tab-content.active{display:block;animation:fu 0.25s ease;}
+.tab-content.active{display:flex;flex-direction:column;flex:1;min-height:100vh;animation:fu 0.25s ease;}
 @keyframes fu{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 
 /* CARD */
