@@ -3236,7 +3236,6 @@ async function cloudPull(){
   const prices=await sbQ(`port_prices?user_id=eq.${SB_UID}`);
   portPrices={};
   prices.forEach(p=>{portPrices[p.isin_key]={prez:p.prez,updatedAt:p.updated_at};});
-  toast(`[C] cloudPull pp:${Object.keys(portPrices).length}`);
   if(Array.isArray(portPrices)) portPrices={};
   save();
   DB.set('dossier',dos);
@@ -3347,10 +3346,8 @@ async function fetchPricesFromFinnhub(){
     }
 
     Object.values(getPort()).filter(p=>p.qty>0).forEach(p=>recalcPortRow(p.isin||p.titolo));
-    toast(`[P2] pp aggiornato: ${Object.keys(portPrices).length} titoli`);
     updDash();
     updDashKPI();
-    toast('[P3] chiamo updMobKPI');
     updMobKPI();
 
     if(ok>0) toast(`Aggiornati: ${ok} ✓${errTickers.length?' · Non trovati: '+errTickers.join(', '):''}`);
@@ -3663,7 +3660,6 @@ function updMobKPI(){
 
 function updMobPort(){
   const body=document.getElementById('mob-port-body');
-  toast(`[P4] updMobPort body:${!!body} pp:${Object.keys(portPrices).length}`);
   if(!body) return;
   const port=getPort();
   const tit=Object.values(port).filter(p=>p.qty>0&&filterKey(p.isin||p.titolo));
