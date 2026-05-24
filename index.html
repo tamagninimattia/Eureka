@@ -3109,7 +3109,14 @@ let SB_REFRESH = localStorage.getItem('sb_refresh')||null;
 /* ── REST helper ── */
 const sbH = ()=>({'Content-Type':'application/json','apikey':SB_KEY,'Authorization':`Bearer ${SB_TOKEN||SB_KEY}`});
 const sbQ = async(path,opts={})=>{
-  const res=await fetch(`${SB_URL}/rest/v1/${path}`,{...opts,headers:{...sbH(),...(opts.prefer?{'Prefer':opts.prefer}:{})}});
+  const doReq=async()=>fetch(`${SB_URL}/rest/v1/${path}`,{...opts,headers:{...sbH(),...(opts.prefer?{'Prefer':opts.prefer}:{})}});
+  let res=await doReq();
+  // Se 401: prova a fare refresh del token e riprova
+  if(res.status===401){
+    const ok=await tryRefresh();
+    if(ok){ res=await doReq(); }
+    else { sbLogout(); throw new Error('Sessione scaduta — rieffettua il login'); }
+  }
   if(!res.ok){const e=await res.text();throw new Error(e);}
   const t=await res.text();return t?JSON.parse(t):[];
 };
