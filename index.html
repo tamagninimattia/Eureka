@@ -682,6 +682,29 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
       </div><!-- /metric-panel -->
       </div><!-- /flex row metriche+torta -->
 
+      <!-- 1. PORTAFOGLIO -->
+      <div class="card" style="overflow-x:auto;">
+        <div class="ch">
+          <div class="ch-left"><div class="ch-ico">◈</div><div class="ch-title">Portafoglio</div></div>
+          <button id="btn-group" class="btn-ghost" onclick="togglePortGroup()" style="font-size:11px;padding:5px 12px;">
+            <span id="btn-group-ico">⊞</span> <span id="btn-group-label">Espandi</span>
+          </button>
+        </div>
+        <div class="tw"><table id="table-port">
+          <thead><tr>
+            <th style="width:24px"></th>
+            <th>Titolo</th>
+            <th>Valore di carico</th>
+            <th>Prezzo attuale</th>
+            <th>Variazione</th>
+            <th>Var €</th>
+            <th>Controvalore</th>
+            <th>Unrealized P&amp;L</th>
+          </tr></thead>
+          <tbody id="tb-port"></tbody>
+        </table></div>
+      </div>
+
       <!-- STORICI -->
       <div class="card">
         <div class="ch"><div class="ch-left"><div class="ch-ico">↑</div><div class="ch-title">Storico vendite &amp; P&amp;L</div></div></div>
