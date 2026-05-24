@@ -47,7 +47,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;back
 .ph-sub{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.14em;text-transform:uppercase;margin-top:7px;}
 .content{padding:0 36px 36px;flex:1;}
 .tab-content{display:none;}
-.tab-content.active{display:flex;flex-direction:column;flex:1;min-height:100vh;animation:fu 0.25s ease;}
+.tab-content.active{display:block;animation:fu 0.25s ease;min-height:100vh;}
 @keyframes fu{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 
 /* CARD */
@@ -328,13 +328,11 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
   .toggle-wrap span:not(.toggle-pill){font-size:10px;}
 }
 
-/* Mobile nav hidden on desktop */
-@media(min-width:769px){
-  #mobile-nav{display:none!important;}
-  #mob-port-list{display:none!important;}
-  #mob-metrics{display:none!important;}
-  #mob-header{display:none!important;}
-}
+/* Mobile-only elements always hidden on desktop */
+#mobile-nav{display:none!important;}
+#mob-port-list{display:none!important;}
+#mob-metrics{display:none!important;}
+#mob-header{display:none!important;}
 </style>
 </head>
 <body>
@@ -1194,9 +1192,7 @@ function fillDossierSelects(){
 
 // Render lista dossier nella tab
 function rendDossier(){
-  console.log('[DOSS] rendDossier chiamata, dos.length:', dos.length, dos);
   const list=document.getElementById('dossier-list');
-  console.log('[DOSS] dossier-list element:', list);
   if(!list)return;
   if(!dos.length){
     list.innerHTML='<div style="font-family:var(--mono);font-size:12px;color:var(--text3);padding:12px 0;">Nessun dossier. Creane uno sopra.</div>';
@@ -1213,14 +1209,9 @@ function rendDossier(){
       <button class="btn-ghost" style="font-size:11px;" onclick="editDossier(${d.id})">✎ Modifica</button>
       ${dos.length>1?`<button class="btn-del" onclick="delDossier(${d.id})">✕</button>`:''}
     </div>`).join('');
-  console.log('[DOSS] innerHTML scritto, lunghezza:', list.innerHTML.length);
   // Debug stili computati
   const tab=document.getElementById('tab-dossier');
   const cont=tab?.querySelector('.content');
-  console.log('[DOSS] tab display:', window.getComputedStyle(tab||document.body).display);
-  console.log('[DOSS] content display:', window.getComputedStyle(cont||document.body).display);
-  console.log('[DOSS] list display:', window.getComputedStyle(list).display);
-  console.log('[DOSS] tab offsetHeight:', tab?.offsetHeight, 'list offsetHeight:', list.offsetHeight);
 }
 
 function countDossierMovimenti(id){
@@ -1587,9 +1578,7 @@ function addAnagrafica(){
 }
 
 function rendAna(){
-  console.log('[ANA] rendAna chiamata, ana.length:', ana.length);
   const tb=document.getElementById('tb-ana');
-  console.log('[ANA] tb-ana element:', tb);
   if(!ana.length){tb.innerHTML='<tr><td colspan="9" class="empty">Nessun titolo in anagrafica</td></tr>';return;}
   tb.innerHTML=ana.map(a=>`<tr>
     <td class="td-n">${a.nome}</td>
@@ -3175,7 +3164,6 @@ function sbLogout(){
 
 /* ── CLOUD PULL ── */
 async function cloudPull(){
-  console.log('[PULL] START, SB_UID:', SB_UID, 'SB_TOKEN:', SB_TOKEN?.slice(0,20));
   const tables={
     acquisti:  d=>{acq=d.map(r=>({...r,sb_id:r.id,id:r.id}));},
     cedole:    d=>{ced=d.map(r=>({...r,sb_id:r.id,id:r.id,provvisoria:r.provvisoria===true}));},
@@ -3221,7 +3209,6 @@ async function cloudPull(){
   }
   save();
   DB.set('dossier',dos);
-  console.log('[PULL] DONE — ana:', ana.length, 'acq:', acq.length, 'dos:', dos.length);
 }
 
 /* ── CLOUD UPSERT / DELETE ── */
