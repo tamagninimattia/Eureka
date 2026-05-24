@@ -3292,7 +3292,9 @@ async function fetchPricesFromFinnhub(){
   const entries=Object.values(port).filter(p=>p.qty>0&&p.ticker);
   if(!entries.length){toast('Nessun ticker in portafoglio. Aggiungilo in anagrafica.',true);return;}
   const btn=document.getElementById('btn-refresh-prices');
-  if(btn){btn.textContent='⟳ Aggiornamento...';btn.disabled=true;}
+  const btnSpan=btn?.querySelector('span');
+  if(btn){btn.disabled=true;btn.style.opacity='0.5';}
+  if(btnSpan) btnSpan.textContent='...';
 
   try{
     const tickers=entries.map(p=>p.ticker);
@@ -3358,9 +3360,12 @@ async function fetchPricesFromFinnhub(){
     console.error('Errore aggiornamento prezzi:', e);
     toast('Errore: '+e.message, true);
   }finally{
-    if(btn){btn.textContent='↻ Prezzi';btn.disabled=false;}
+    if(btn){btn.disabled=false;btn.style.opacity='';}
+    if(btnSpan) btnSpan.textContent='Prezzi';
   }
 }
+
+let _pricesPaused=false;
 
 const _ico_pause='<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/></svg>';
 const _ico_play='<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>';
@@ -3496,13 +3501,12 @@ function startAutoRefresh(){
   const updateBtn=()=>{
     const btn=document.getElementById('btn-refresh-prices');
     if(!btn) return;
-    const open=isMktOpen();
-    if(open){
-      const lbl=btn.querySelector('span');
-      if(lbl) lbl.textContent=`Prezzi (${countdown}s)`;
+    const lbl=btn.querySelector('span');
+    if(!lbl) return;
+    if(isMktOpen()){
+      lbl.textContent=`Prezzi (${countdown}s)`;
     } else {
-      const lbl=btn.querySelector('span');
-      if(lbl) lbl.textContent='Prezzi (chiuso)';
+      lbl.textContent='Prezzi';
     }
   };
 
