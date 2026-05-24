@@ -3242,6 +3242,7 @@ async function cloudPull(){
   const prices=await sbQ(`port_prices?user_id=eq.${SB_UID}`);
   portPrices={};
   prices.forEach(p=>{portPrices[p.isin_key]={prez:p.prez,updatedAt:p.updated_at};});
+  toast(`[C] cloudPull pp:${Object.keys(portPrices).length}`);
   if(Array.isArray(portPrices)) portPrices={};
   save();
   DB.set('dossier',dos);
@@ -3292,6 +3293,7 @@ async function cSavePrice(key,prez){
 
 /* ── PREZZI VIA SUPABASE EDGE FUNCTION (Yahoo Finance proxy) ── */
 async function fetchPricesFromFinnhub(){
+  toast(`[P1] FETCH START pp:${Object.keys(portPrices).length}`);
   const port=getPort();
   const entries=Object.values(port).filter(p=>p.qty>0&&p.ticker);
   if(!entries.length){toast('Nessun ticker in portafoglio. Aggiungilo in anagrafica.',true);return;}
@@ -3349,9 +3351,11 @@ async function fetchPricesFromFinnhub(){
     }
 
     Object.values(getPort()).filter(p=>p.qty>0).forEach(p=>recalcPortRow(p.isin||p.titolo));
+    toast(`[P2] pp aggiornato: ${Object.keys(portPrices).length} titoli`);
     updDash();
     updDashKPI();
-    updMobKPI(); // aggiorna anche la view mobile
+    toast('[P3] chiamo updMobKPI');
+    updMobKPI();
 
     if(ok>0) toast(`Aggiornati: ${ok} ✓${errTickers.length?' · Non trovati: '+errTickers.join(', '):''}`);
     else toast(`Nessun prezzo trovato. Verifica i ticker: ${errTickers.join(', ')}`, true);
@@ -3660,6 +3664,7 @@ function updMobKPI(){
 
 function updMobPort(){
   const body=document.getElementById('mob-port-body');
+  toast(`[P4] updMobPort body:${!!body} pp:${Object.keys(portPrices).length}`);
   if(!body) return;
   const port=getPort();
   const tit=Object.values(port).filter(p=>p.qty>0&&filterKey(p.isin||p.titolo));
