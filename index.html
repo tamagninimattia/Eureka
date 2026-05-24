@@ -328,59 +328,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
   .toggle-wrap span:not(.toggle-pill){font-size:10px;}
 }
 
-/* ═══════════════════════════════════════
-   MOBILE LAYOUT — max-width: 768px
-   Desktop rimane identico sopra i 769px
-   ═══════════════════════════════════════ */
-@media(max-width:768px){
-  #app-shell{flex-direction:column;}
-  .sidebar{display:none!important;}
-  .main{padding:0 0 74px;overflow-x:hidden;width:100%;max-width:100vw;box-sizing:border-box;}
-  body{overflow-x:hidden;}
-  /* Nasconde tutto il contenuto desktop della dashboard */
-  #mob-dash-hide{display:none!important;}
-  /* Nasconde header di pagina in tutte le tab */
-  .ph{display:none!important;}
-  /* Padding contenuto ridotto su mobile */
-  .content{padding:12px!important;}
-  /* Bottom nav */
-  #mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:62px;background:var(--bg1);border-top:1px solid var(--border2);z-index:1000;align-items:stretch;padding-bottom:env(safe-area-inset-bottom,0px);}
-  #mobile-nav .mn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:transparent;border:none;cursor:pointer;color:var(--text3);font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:0.05em;transition:color 0.15s;padding:8px 2px;position:relative;}
-  #mobile-nav .mn-item.active{color:var(--gold);}
-  #mobile-nav .mn-item.active::before{content:'';position:absolute;top:0;left:15%;right:15%;height:2px;background:var(--gold);border-radius:0 0 2px 2px;}
-  #mobile-nav .mn-ico{font-size:20px;line-height:1;}
-  /* Desktop-only nascosti */
-  .mob-hide{display:none!important;}
-  .tw{display:none!important;}
-  /* Form touch */
-  .fgroup input,.fgroup select{font-size:16px!important;padding:12px 14px!important;min-height:48px;box-sizing:border-box;width:100%;}
-  .fgroup{width:100%;box-sizing:border-box;}
-  .fg{display:flex;flex-direction:column;gap:12px;}
-  .btn{min-height:48px;font-size:15px!important;width:100%;justify-content:center;box-sizing:border-box;}
-  .fa{flex-direction:column;}
-  /* Logo mobile */
-  #mob-header{display:flex;align-items:center;justify-content:center;padding:20px 16px 10px;background:var(--bg);width:100%;}
-  /* Metriche mobile */
-  #mob-metrics{display:flex;flex-direction:column;gap:10px;padding:0 12px 12px;width:100%;box-sizing:border-box;}
-  #mob-metrics .metric-card{padding:16px 18px;box-sizing:border-box;}
-  /* Portafoglio mobile */
-  #mob-port-list{display:flex;flex-direction:column;background:var(--bg1);border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden;width:100%;}
-  .mob-port-row{display:grid;grid-template-columns:1fr 56px 52px 58px 66px;align-items:center;gap:4px;padding:10px 14px;border-bottom:1px solid var(--border);width:100%;box-sizing:border-box;}
-  .mob-port-row:last-child{border-bottom:none;}
-  .mob-port-row.header{background:var(--bg2);font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);padding:7px 14px;}
-  .mob-port-row.total{background:var(--bg2);}
-  .mob-tit{font-family:var(--sans);font-size:13px;color:var(--text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
-  .mob-prez{font-family:var(--mono);font-size:11px;color:var(--text);text-align:right;white-space:nowrap;}
-  .mob-var{font-family:var(--mono);font-size:11px;text-align:right;padding:2px 4px;border-radius:4px;white-space:nowrap;}
-  .mob-var.pos{color:var(--green);background:rgba(52,201,126,0.1);}
-  .mob-var.neg{color:var(--red);background:rgba(224,84,112,0.1);}
-  .mob-vare{font-family:var(--mono);font-size:11px;text-align:right;white-space:nowrap;}
-  .mob-vare.pos{color:var(--green);}
-  .mob-vare.neg{color:var(--red);}
-  .mob-ctv{font-family:var(--mono);font-size:11px;color:var(--gold);font-weight:600;text-align:right;white-space:nowrap;}
-  /* Card mobile */
-  .card{border-radius:0;border-left:none;border-right:none;margin-bottom:0;}
-}
+/* Mobile nav hidden on desktop */
 @media(min-width:769px){
   #mobile-nav{display:none!important;}
   #mob-port-list{display:none!important;}
