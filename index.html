@@ -3349,8 +3349,9 @@ async function fetchPricesFromFinnhub(){
     }
 
     Object.values(getPort()).filter(p=>p.qty>0).forEach(p=>recalcPortRow(p.isin||p.titolo));
-    updDash(); // re-render completo per aggiornare anche la riga totale e le metriche
+    updDash();
     updDashKPI();
+    updMobKPI(); // aggiorna anche la view mobile
 
     if(ok>0) toast(`Aggiornati: ${ok} ✓${errTickers.length?' · Non trovati: '+errTickers.join(', '):''}`);
     else toast(`Nessun prezzo trovato. Verifica i ticker: ${errTickers.join(', ')}`, true);
