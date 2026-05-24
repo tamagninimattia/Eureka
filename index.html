@@ -1194,7 +1194,9 @@ function fillDossierSelects(){
 
 // Render lista dossier nella tab
 function rendDossier(){
+  console.log('[DOSS] rendDossier chiamata, dos.length:', dos.length, dos);
   const list=document.getElementById('dossier-list');
+  console.log('[DOSS] dossier-list element:', list);
   if(!list)return;
   if(!dos.length){
     list.innerHTML='<div style="font-family:var(--mono);font-size:12px;color:var(--text3);padding:12px 0;">Nessun dossier. Creane uno sopra.</div>';
@@ -1576,7 +1578,9 @@ function addAnagrafica(){
 }
 
 function rendAna(){
+  console.log('[ANA] rendAna chiamata, ana.length:', ana.length);
   const tb=document.getElementById('tb-ana');
+  console.log('[ANA] tb-ana element:', tb);
   if(!ana.length){tb.innerHTML='<tr><td colspan="9" class="empty">Nessun titolo in anagrafica</td></tr>';return;}
   tb.innerHTML=ana.map(a=>`<tr>
     <td class="td-n">${a.nome}</td>
@@ -3162,6 +3166,7 @@ function sbLogout(){
 
 /* ── CLOUD PULL ── */
 async function cloudPull(){
+  console.log('[PULL] START, SB_UID:', SB_UID, 'SB_TOKEN:', SB_TOKEN?.slice(0,20));
   const tables={
     acquisti:  d=>{acq=d.map(r=>({...r,sb_id:r.id,id:r.id}));},
     cedole:    d=>{ced=d.map(r=>({...r,sb_id:r.id,id:r.id,provvisoria:r.provvisoria===true}));},
@@ -3170,30 +3175,44 @@ async function cloudPull(){
     anagrafica:d=>{ana=d.map(r=>({...r,sb_id:r.id,id:r.id}));}
   };
   for(const[table,setter]of Object.entries(tables)){
-    const rows=await sbQ(`${table}?user_id=eq.${SB_UID}&order=id.asc`);
-    setter(rows.map(({user_id,...r})=>r));
+    try{
+      const rows=await sbQ(`${table}?user_id=eq.${SB_UID}&order=id.asc`);
+      console.log(`[PULL] ${table}: ${rows.length} righe`);
+      setter(rows.map(({user_id,...r})=>r));
+    }catch(e){
+      console.error(`[PULL] ERRORE ${table}:`, e.message);
+    }
   }
   // Carica dossier
-  const dosRows=await sbQ(`dossier?user_id=eq.${SB_UID}&order=id.asc`);
-  if(dosRows.length){
-    dos=dosRows.map(({user_id,...r})=>r);
-    DB.set('dossier',dos);
-  } else {
-    // Nessun dossier su cloud: crea il principale
-    const nd={nome:'Dossier principale',colore:'#d4a853',user_id:SB_UID};
-    const res=await sbQ('dossier',{method:'POST',body:JSON.stringify(nd),prefer:'return=representation'});
-    const created=Array.isArray(res)?res[0]:res;
-    dos=created?[{id:created.id,nome:created.nome,colore:created.colore}]:
-                [{id:Date.now(),nome:'Dossier principale',colore:'#d4a853'}];
-    DB.set('dossier',dos);
+  try{
+    const dosRows=await sbQ(`dossier?user_id=eq.${SB_UID}&order=id.asc`);
+    console.log('[PULL] dossier:', dosRows.length, 'righe');
+    if(dosRows.length){
+      dos=dosRows.map(({user_id,...r})=>r);
+      DB.set('dossier',dos);
+    } else {
+      const nd={nome:'Dossier principale',colore:'#d4a853',user_id:SB_UID};
+      const res=await sbQ('dossier',{method:'POST',body:JSON.stringify(nd),prefer:'return=representation'});
+      const created=Array.isArray(res)?res[0]:res;
+      dos=created?[{id:created.id,nome:created.nome,colore:created.colore}]:
+                  [{id:Date.now(),nome:'Dossier principale',colore:'#d4a853'}];
+      DB.set('dossier',dos);
+    }
+  }catch(e){
+    console.error('[PULL] ERRORE dossier:', e.message);
   }
   // prezzi
-  const prices=await sbQ(`port_prices?user_id=eq.${SB_UID}`);
-  portPrices={};
-  prices.forEach(p=>{portPrices[p.isin_key]={prez:p.prez,updatedAt:p.updated_at};});
-  if(Array.isArray(portPrices)) portPrices={};
+  try{
+    const prices=await sbQ(`port_prices?user_id=eq.${SB_UID}`);
+    console.log('[PULL] port_prices:', prices.length, 'righe');
+    portPrices={};
+    prices.forEach(p=>{portPrices[p.isin_key]={prez:p.prez,updatedAt:p.updated_at};});
+  }catch(e){
+    console.error('[PULL] ERRORE port_prices:', e.message);
+  }
   save();
   DB.set('dossier',dos);
+  console.log('[PULL] DONE — ana:', ana.length, 'acq:', acq.length, 'dos:', dos.length);
 }
 
 /* ── CLOUD UPSERT / DELETE ── */
