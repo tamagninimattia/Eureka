@@ -366,19 +366,11 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
     <button class="ni" onclick="sbLogout()" style="color:var(--red);"><div class="ni-ico" style="background:rgba(224,84,112,0.1);"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></svg></div><span>Esci</span></button>
   </nav>
   <div class="sb-backup">
-    <div style="font-family:var(--mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;padding:0 2px;margin-bottom:4px;">Movimenti</div>
-    <button class="btn-backup export" onclick="openExportModal('mov')">
-      <div class="btn-backup-ico">↥</div><span>Esporta movimenti</span>
+    <button class="btn-backup export" onclick="openExportModal()">
+      <div class="btn-backup-ico">↥</div><span>Esporta backup</span>
     </button>
-    <button class="btn-backup import" onclick="openImportModal('mov')">
-      <div class="btn-backup-ico">↧</div><span>Importa movimenti</span>
-    </button>
-    <div style="font-family:var(--mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;padding:0 2px;margin-top:8px;margin-bottom:4px;">Anagrafica</div>
-    <button class="btn-backup export" onclick="openExportModal('ana')" style="background:var(--bdim);color:var(--blue);">
-      <div class="btn-backup-ico">↥</div><span>Esporta anagrafica</span>
-    </button>
-    <button class="btn-backup import" onclick="openImportModal('ana')" style="background:var(--glass);color:var(--text2);">
-      <div class="btn-backup-ico">↧</div><span>Importa anagrafica</span>
+    <button class="btn-backup import" onclick="openImportModal()">
+      <div class="btn-backup-ico">↧</div><span>Importa backup</span>
     </button>
   </div>
 </aside>
@@ -2896,65 +2888,43 @@ function onPortDragEnd(e){
 }
 
 /* ── BACKUP / RESTORE ── */
-let _exportType='mov'; // 'mov' | 'ana'
-let _importType='mov';
-
-function openExportModal(type){
-  _exportType=type;
-  const isAna=(type==='ana');
-  document.getElementById('export-title').innerHTML=isAna
-    ?'Esporta <em style="font-style:italic;color:var(--blue)">Anagrafica</em>'
-    :'Esporta <em style="font-style:italic;color:var(--gold)">Movimenti</em>';
-  document.getElementById('export-sub').textContent=isAna
-    ?'// scarica i titoli in anagrafica in formato JSON'
-    :'// scarica acquisti, cedole, vendite e costi in formato JSON';
-  if(isAna){
-    document.getElementById('export-info').innerHTML=
-      `<strong>Anagrafica da esportare:</strong><br>`+
-      `Titoli censiti: <strong style="color:var(--blue)">${ana.length}</strong>`;
-  } else {
-    const counts={acquisti:acq.length,cedole:ced.length,vendite:ven.length,costi:cos.length};
-    const total=Object.values(counts).reduce((a,b)=>a+b,0);
-    document.getElementById('export-info').innerHTML=
-      `<strong>Movimenti da esportare:</strong><br>`+
-      `Acquisti: <strong style="color:var(--text)">${counts.acquisti}</strong> &nbsp;·&nbsp; `+
-      `Cedole: <strong style="color:var(--text)">${counts.cedole}</strong> &nbsp;·&nbsp; `+
-      `Vendite: <strong style="color:var(--text)">${counts.vendite}</strong> &nbsp;·&nbsp; `+
-      `Costi: <strong style="color:var(--text)">${counts.costi}</strong><br>`+
-      `<br>Totale record: <strong style="color:var(--gold)">${total}</strong>`;
-  }
+function openExportModal(){
+  const total=acq.length+ced.length+ven.length+cos.length;
+  document.getElementById('export-title').innerHTML='Esporta <em style="font-style:italic;color:var(--gold)">Backup</em>';
+  document.getElementById('export-sub').textContent='// scarica un backup completo di anagrafica e movimenti in formato JSON';
+  document.getElementById('export-info').innerHTML=
+    `<strong>Contenuto del backup:</strong><br>`+
+    `Titoli in anagrafica: <strong style="color:var(--blue)">${ana.length}</strong><br><br>`+
+    `Acquisti: <strong style="color:var(--gold)">${acq.length}</strong> &nbsp;·&nbsp; `+
+    `Cedole: <strong style="color:var(--gold)">${ced.length}</strong> &nbsp;·&nbsp; `+
+    `Vendite: <strong style="color:var(--gold)">${ven.length}</strong> &nbsp;·&nbsp; `+
+    `Costi: <strong style="color:var(--gold)">${cos.length}</strong><br>`+
+    `<br>Totale record: <strong style="color:var(--text)">${total}</strong>`;
   document.getElementById('modal-export').classList.add('show');
 }
 
 function doExport(){
-  const isAna=(_exportType==='ana');
   const dt=new Date().toISOString().slice(0,10);
-  let payload, filename;
-  if(isAna){
-    payload={_meta:{version:'2.4',exportedAt:new Date().toISOString(),app:'Eureka',type:'anagrafica'},anagrafica:ana};
-    filename=`eureka-anagrafica-${dt}.json`;
-  } else {
-    payload={_meta:{version:'2.4',exportedAt:new Date().toISOString(),app:'Eureka',type:'movimenti'},acquisti:acq,cedole:ced,vendite:ven,costi:cos};
-    filename=`eureka-movimenti-${dt}.json`;
-  }
+  const payload={
+    _meta:{version:'2.5',exportedAt:new Date().toISOString(),app:'Eureka',type:'backup'},
+    anagrafica:ana,
+    acquisti:acq,
+    cedole:ced,
+    vendite:ven,
+    costi:cos
+  };
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url;a.download=filename;a.click();
+  a.href=url;a.download=`eureka-backup-${dt}.json`;a.click();
   URL.revokeObjectURL(url);
   closeModal('modal-export');
-  toast('Esportazione completata ✓');
+  toast('Backup esportato ✓');
 }
 
-function openImportModal(type){
-  _importType=type;
-  const isAna=(type==='ana');
-  document.getElementById('import-title').innerHTML=isAna
-    ?'Importa <em style="font-style:italic;color:var(--blue)">Anagrafica</em>'
-    :'Importa <em style="font-style:italic;color:var(--gold)">Movimenti</em>';
-  document.getElementById('import-sub').textContent=isAna
-    ?'// ripristina l\'anagrafica da un file JSON esportato'
-    :'// ripristina movimenti da un file JSON esportato';
+function openImportModal(){
+  document.getElementById('import-title').innerHTML='Importa <em style="font-style:italic;color:var(--gold)">Backup</em>';
+  document.getElementById('import-sub').textContent='// ripristina anagrafica e movimenti da un file JSON esportato da Eureka';
   document.getElementById('import-preview').style.display='none';
   document.getElementById('import-preview').className='modal-info';
   document.getElementById('import-actions').innerHTML='<button class="btn-ghost" onclick="closeModal(\'modal-import\')">Annulla</button>';
@@ -2976,33 +2946,47 @@ function parseImportFile(file){
     try{
       const data=JSON.parse(e.target.result);
       if(!data._meta||!['Eureka','PortfolioMonitor'].includes(data._meta.app)) throw new Error('File non riconosciuto — assicurati di usare file esportati da Eureka');
-      // compatibilità: vecchi file senza type accettati come movimenti
       const fileType=data._meta.type||'movimenti';
-      const expectedType=_importType==='ana'?'anagrafica':'movimenti';
-      if(fileType!==expectedType){
-        showImportError(`Tipo file errato: questo file contiene "${fileType}", ma stai importando "${expectedType}". Usa il pulsante corretto.`);
+      // Retrocompatibilità: accetta anche vecchi file separati (movimenti o anagrafica)
+      const isBackup=(fileType==='backup');
+      const isMovimenti=(fileType==='movimenti');
+      const isAnagrafica=(fileType==='anagrafica');
+      if(!isBackup&&!isMovimenti&&!isAnagrafica){
+        showImportError(`Tipo file non riconosciuto: "${fileType}".`);
         return;
       }
       _importPayload=data;
       const prev=document.getElementById('import-preview');
       prev.style.display='block';
       prev.className='modal-info';
-      if(_importType==='ana'){
+      if(isBackup){
+        const tot=(data.acquisti||[]).length+(data.cedole||[]).length+(data.vendite||[]).length+(data.costi||[]).length;
         prev.innerHTML=
           `<strong>File valido:</strong> ${file.name}<br>`+
-          `Esportato il: <strong style="color:var(--text)">${new Date(data._meta.exportedAt).toLocaleString('it-IT')}</strong><br><br>`+
+          `Esportato il: <strong style="color:var(--text)">${new Date(data._meta.exportedAt).toLocaleString('it-IT')}</strong><br>`+
+          `Versione: <strong style="color:var(--text)">${data._meta.version}</strong><br><br>`+
           `Titoli in anagrafica: <strong style="color:var(--blue)">${(data.anagrafica||[]).length}</strong><br>`+
-          `<br><span style="color:var(--red)">⚠ Sovrascriverà l'anagrafica attuale (${ana.length} titoli).</span>`;
+          `Acquisti: <strong style="color:var(--gold)">${(data.acquisti||[]).length}</strong> &nbsp;·&nbsp; `+
+          `Cedole: <strong style="color:var(--gold)">${(data.cedole||[]).length}</strong> &nbsp;·&nbsp; `+
+          `Vendite: <strong style="color:var(--gold)">${(data.vendite||[]).length}</strong> &nbsp;·&nbsp; `+
+          `Costi: <strong style="color:var(--gold)">${(data.costi||[]).length}</strong><br>`+
+          `<br><span style="color:var(--red)">⚠ Sovrascriverà tutti i dati attuali (anagrafica + movimenti).</span>`;
+      } else if(isAnagrafica){
+        prev.innerHTML=
+          `<strong>File valido (anagrafica):</strong> ${file.name}<br>`+
+          `Esportato il: <strong style="color:var(--text)">${new Date(data._meta.exportedAt).toLocaleString('it-IT')}</strong><br><br>`+
+          `Titoli: <strong style="color:var(--blue)">${(data.anagrafica||[]).length}</strong><br>`+
+          `<br><span style="color:var(--red)">⚠ Sovrascriverà solo l'anagrafica attuale (${ana.length} titoli). I movimenti non verranno modificati.</span>`;
       } else {
         prev.innerHTML=
-          `<strong>File valido:</strong> ${file.name}<br>`+
+          `<strong>File valido (movimenti):</strong> ${file.name}<br>`+
           `Esportato il: <strong style="color:var(--text)">${new Date(data._meta.exportedAt).toLocaleString('it-IT')}</strong><br>`+
           `Versione: <strong style="color:var(--text)">${data._meta.version}</strong><br><br>`+
           `Acquisti: <strong style="color:var(--gold)">${(data.acquisti||[]).length}</strong> &nbsp;·&nbsp; `+
           `Cedole: <strong style="color:var(--gold)">${(data.cedole||[]).length}</strong> &nbsp;·&nbsp; `+
           `Vendite: <strong style="color:var(--gold)">${(data.vendite||[]).length}</strong> &nbsp;·&nbsp; `+
           `Costi: <strong style="color:var(--gold)">${(data.costi||[]).length}</strong><br>`+
-          `<br><span style="color:var(--red)">⚠ Sovrascriverà i movimenti attuali.</span>`;
+          `<br><span style="color:var(--red)">⚠ Sovrascriverà solo i movimenti attuali. L'anagrafica non verrà modificata.</span>`;
       }
       document.getElementById('import-actions').innerHTML=
         `<button class="btn" onclick="doImport()">↧ Importa e sostituisci</button>`+
@@ -3021,41 +3005,36 @@ function showImportError(msg){
 
 function doImport(){
   if(!_importPayload){toast('Nessun file valido caricato',true);return;}
-  if(_importType==='ana'){
+  const fileType=_importPayload._meta.type||'movimenti';
+  if(fileType==='backup'||fileType==='anagrafica'){
     ana=_importPayload.anagrafica||[];
     save();rendAna();fillAnaSelect();
-    cloudPushAll('anagrafica');
-    closeModal('modal-import');toast('Anagrafica importata ✓');
-  } else {
+  }
+  if(fileType==='backup'||fileType==='movimenti'){
     acq=_importPayload.acquisti||[];
     ced=_importPayload.cedole||[];
     ven=_importPayload.vendite||[];
     cos=_importPayload.costi||[];
     save();rendAcq();rendCed();rendVen();rendCos();
     buildFilterChips();updDash();updMinus();
-    cloudPushAll('movimenti');
-    closeModal('modal-import');toast('Movimenti importati ✓');
   }
+  cloudPushAll();
+  closeModal('modal-import');
+  toast('Backup importato ✓');
   _importPayload=null;
 }
 
 /* ── CLOUD PUSH ALL (usato dopo import) ── */
-async function cloudPushAll(type){
+async function cloudPushAll(){
   if(!SB_TOKEN||!SB_UID){ toast('Non connesso: dati solo in locale',true); return; }
   toast('Sincronizzazione cloud in corso…');
   try{
-    const sets = type==='anagrafica'
-      ? [['anagrafica', ana]]
-      : [['acquisti',acq],['cedole',ced],['vendite',ven],['costi',cos]];
-
+    const sets=[['anagrafica',ana],['acquisti',acq],['cedole',ced],['vendite',ven],['costi',cos]];
     for(const [table, arr] of sets){
-      // Elimina tutti i record esistenti dell'utente
       await sbQ(`${table}?user_id=eq.${SB_UID}`, {method:'DELETE'});
-      // Reinserisce tutti i record
       if(arr.length){
         const rows=arr.map(({id,sb_id,...r})=>({...r,user_id:SB_UID}));
         const res=await sbQ(table,{method:'POST',body:JSON.stringify(rows),prefer:'return=representation'});
-        // Aggiorna sb_id nei record locali
         if(Array.isArray(res)) res.forEach((r,i)=>{if(arr[i])arr[i].sb_id=r.id;});
       }
     }
