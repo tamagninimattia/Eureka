@@ -3171,108 +3171,96 @@ async function cloudPushAll(){
 }
 /* ══ MOBILE DASHBOARD ══ */
 function updMobileDash(){
-  // KPI
-  const nlEl  = document.getElementById('mob-net-liq');
-  const tirEl = document.getElementById('mob-tir-reale');
-  const rnEl  = document.getElementById('mob-net-return');
+  var desktopNL  = document.getElementById('mkt-net-liq');
+  var desktopTIR = document.getElementById('m-xirr-real');
+  var desktopRN  = document.getElementById('m-risultato-netto');
+  var nlEl  = document.getElementById('mob-net-liq');
+  var tirEl = document.getElementById('mob-tir-reale');
+  var rnEl  = document.getElementById('mob-net-return');
 
-  // Copia i valori già calcolati dal desktop
-  const desktopNL  = document.getElementById('mkt-net-liq');
-  const desktopTIR = document.getElementById('m-xirr-real');
-  const desktopRN  = document.getElementById('m-risultato-netto');
-
-  if(nlEl && desktopNL){
-    nlEl.textContent = desktopNL.textContent;
-    nlEl.className = 'mob-kpi-value ' + (desktopNL.style.color.includes('green') ? 'pos' : desktopNL.style.color.includes('red') ? 'neg' : '');
+  function colorClass(el){
+    if(!el) return '';
+    var c = el.style.color||'';
+    if(c.indexOf('green')>=0) return 'pos';
+    if(c.indexOf('red')>=0) return 'neg';
+    return '';
   }
-  if(tirEl && desktopTIR){
-    tirEl.textContent = desktopTIR.textContent;
-    tirEl.className = 'mob-kpi-value ' + (desktopTIR.style.color.includes('green') ? 'pos' : desktopTIR.style.color.includes('red') ? 'neg' : '');
-  }
-  if(rnEl && desktopRN){
-    rnEl.textContent = desktopRN.textContent;
-    const v = parseFloat(desktopRN.textContent.replace(/[^0-9.,\-]/g,'').replace(',','.'));
-    rnEl.className = 'mob-kpi-value ' + (isNaN(v) ? '' : v >= 0 ? 'pos' : 'neg');
+  function numClass(txt){
+    var n = parseFloat(txt.replace(/[^0-9.,-]/g,'').replace(',','.'));
+    return isNaN(n)?'':n>=0?'pos':'neg';
   }
 
-  // Tabella posizioni
-  const tb = document.getElementById('mob-tb-port');
+  if(nlEl&&desktopNL){ nlEl.textContent=desktopNL.textContent; nlEl.className='mob-kpi-value '+colorClass(desktopNL); }
+  if(tirEl&&desktopTIR){ tirEl.textContent=desktopTIR.textContent; tirEl.className='mob-kpi-value '+colorClass(desktopTIR); }
+  if(rnEl&&desktopRN){ rnEl.textContent=desktopRN.textContent; rnEl.className='mob-kpi-value '+numClass(desktopRN.textContent); }
+
+  var tb = document.getElementById('mob-tb-port');
   if(!tb) return;
-  const port = getPort();
-  const tit = Object.values(port).filter(p => p.qty > 0);
+  var port = getPort();
+  var tit = Object.values(port).filter(function(p){ return p.qty>0; });
 
-  // Applica stesso ordine del desktop
-  const orderedKeys = [
-    ...portOrder.filter(k => tit.some(p => (p.isin||p.titolo) === k)),
-    ...tit.filter(p => !portOrder.includes(p.isin||p.titolo)).map(p => p.isin||p.titolo)
-  ];
-  const ordered = orderedKeys.map(k => tit.find(p => (p.isin||p.titolo) === k)).filter(Boolean);
+  var orderedKeys = portOrder.filter(function(k){ return tit.some(function(p){ return (p.isin||p.titolo)===k; }); })
+    .concat(tit.filter(function(p){ return !portOrder.includes(p.isin||p.titolo); }).map(function(p){ return p.isin||p.titolo; }));
+  var ordered = orderedKeys.map(function(k){ return tit.find(function(p){ return (p.isin||p.titolo)===k; }); }).filter(Boolean);
 
   if(!ordered.length){
-    tb.innerHTML = '<tr><td colspan="5" class="mob-empty">Nessuna posizione aperta</td></tr>';
+    tb.innerHTML='<tr><td colspan="5" class="mob-empty">Nessuna posizione aperta</td></tr>';
     return;
   }
 
-  let totCtv = 0;
-  let totVarCtv = 0;
-  let hasTotVarCtv = false;
+  var totCtv=0, totVarCtv=0, hasTot=false, rows='';
 
-  tb.innerHTML = ordered.map(p => {
-    const key = p.isin || p.titolo;
-    const pp = portPrices[key] && typeof portPrices[key] === 'object' && !Array.isArray(portPrices[key])
-      ? portPrices[key] : {};
-    const prezVal = pp.prez === '' || pp.prez == null ? '' : +pp.prez;
-    const changePct = pp.changePct ?? null;
-    const change    = pp.change ?? null;
+  ordered.forEach(function(p){
+    var key = p.isin||p.titolo;
+    var pp = portPrices[key]&&typeof portPrices[key]==='object'&&!Array.isArray(portPrices[key]) ? portPrices[key] : {};
+    var prezVal   = (pp.prez===''||pp.prez==null) ? '' : +pp.prez;
+    var changePct = pp.changePct!=null ? pp.changePct : null;
+    var change    = pp.change!=null    ? pp.change    : null;
 
-    // Controvalore
-    const ctv = prezVal !== '' ? prezVal * p.qty : null;
-    if(ctv !== null) totCtv += ctv;
+    var ctv = prezVal!=='' ? prezVal*p.qty : null;
+    if(ctv!==null) totCtv+=ctv;
 
-    // Var € (change * qty alla data prezzo)
-    const priceDate = pp.updatedAt ? pp.updatedAt.slice(0,10) : null;
-    const qtyAtDate = priceDate
-      ? acq.filter(a=>(a.isin||a.titolo)===key&&a.data<priceDate).reduce((s,a)=>s+(+a.qty||0),0)
-        - ven.filter(v=>(v.isin||v.titolo)===key&&v.data<priceDate).reduce((s,v)=>s+(+v.qty||0),0)
+    var priceDate = pp.updatedAt ? pp.updatedAt.slice(0,10) : null;
+    var qtyAtDate = priceDate
+      ? acq.filter(function(a){ return (a.isin||a.titolo)===key&&a.data<priceDate; }).reduce(function(s,a){ return s+(+a.qty||0); },0)
+        - ven.filter(function(v){ return (v.isin||v.titolo)===key&&v.data<priceDate; }).reduce(function(s,v){ return s+(+v.qty||0); },0)
       : p.qty;
-    const varCtv = (prezVal !== '' && change !== null && qtyAtDate > 0) ? change * qtyAtDate : null;
-    if(varCtv !== null){ totVarCtv += varCtv; hasTotVarCtv = true; }
+    var varCtv = (prezVal!==''&&change!==null&&qtyAtDate>0) ? change*qtyAtDate : null;
+    if(varCtv!==null){ totVarCtv+=varCtv; hasTot=true; }
 
-    const prezStr  = prezVal !== '' ? E(+prezVal, 4) : '—';
-    const ctvStr   = ctv !== null ? E(ctv) : '—';
+    var prezStr = prezVal!=='' ? E(+prezVal,4) : '—';
+    var ctvStr  = ctv!==null   ? E(ctv)        : '—';
 
-    const varPctEl = changePct !== null
-      ? `<span class="mob-badge \${changePct>=0?'pos':'neg'}">\${changePct>=0?'+':''}\${changePct.toFixed(2)}%</span>`
+    var varPctHtml = changePct!==null
+      ? '<span class="mob-badge '+(changePct>=0?'pos':'neg')+'">'+(changePct>=0?'+':'')+changePct.toFixed(2)+'%</span>'
       : '—';
-    const varCtvEl = varCtv !== null
-      ? `<span class="mob-badge \${varCtv>=0?'pos':'neg'}">\${varCtv>=0?'+':''}\${E(varCtv)}</span>`
+    var varCtvHtml = varCtv!==null
+      ? '<span class="mob-badge '+(varCtv>=0?'pos':'neg')+'">'+(varCtv>=0?'+':'')+E(varCtv)+'</span>'
       : '—';
 
-    return `<tr>
-      <td><span class="mob-titolo" title="\${p.titolo}">\${p.titolo}</span></td>
-      <td>\${prezStr}</td>
-      <td>\${varPctEl}</td>
-      <td>\${varCtvEl}</td>
-      <td style="color:var(--gold);font-weight:600;">\${ctvStr}</td>
-    </tr>`;
-  }).join('');
+    rows += '<tr>'
+      +'<td><span class="mob-titolo" title="'+p.titolo+'">'+p.titolo+'</span></td>'
+      +'<td>'+prezStr+'</td>'
+      +'<td>'+varPctHtml+'</td>'
+      +'<td>'+varCtvHtml+'</td>'
+      +'<td style="color:var(--gold);font-weight:600;">'+ctvStr+'</td>'
+      +'</tr>';
+  });
 
-  // Riga totale
-  const totCtvStr    = totCtv > 0 ? E(totCtv) : '—';
-  const totVarCtvStr = hasTotVarCtv
-    ? `<span class="mob-badge \${totVarCtv>=0?'pos':'neg'}">\${totVarCtv>=0?'+':''}\${E(totVarCtv)}</span>`
+  tb.innerHTML = rows;
+
+  var totVarHtml = hasTot
+    ? '<span class="mob-badge '+(totVarCtv>=0?'pos':'neg')+'">'+(totVarCtv>=0?'+':'')+E(totVarCtv)+'</span>'
     : '—';
-  const totRow = document.createElement('tr');
-  totRow.className = 'mob-total-row';
-  totRow.innerHTML = `
-    <td><span class="mob-titolo">Totale</span></td>
-    <td></td>
-    <td></td>
-    <td>\${totVarCtvStr}</td>
-    <td style="color:var(--gold);font-weight:700;">\${totCtvStr}</td>
-  `;
+  var totRow = document.createElement('tr');
+  totRow.className='mob-total-row';
+  totRow.innerHTML = '<td><span class="mob-titolo">Totale</span></td>'
+    +'<td></td><td></td>'
+    +'<td>'+totVarHtml+'</td>'
+    +'<td style="color:var(--gold);font-weight:700;">'+(totCtv>0?E(totCtv):'—')+'</td>';
   tb.appendChild(totRow);
 }
+
 
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 
