@@ -2038,7 +2038,7 @@ function calcVen(){
     blocked=true; msg=`⚠ Non puoi compensare minusvalenze su una vendita in perdita (o in pareggio).`;
   } else if(mc>minus){
     blocked=true; msg=`⚠ Importo superiore alle minusvalenze compensabili residue (${E(minus)}). Riduci l'importo per procedere.`;
-  } else if(mc>pl){
+  } else if(pl>0 && mc>pl){
     blocked=true; msg=`⚠ Non puoi compensare più della plusvalenza realizzata (${E(pl)}).`;
   }
   const mcEff = blocked ? 0 : mc;
@@ -2083,7 +2083,7 @@ function addVen(){
   if(mc<0) mc=0;
   if(pl<=0 && mc>0){toast('Non puoi compensare minusvalenze su una vendita in perdita',true);return;}
   if(mc>minus){toast(`Importo superiore alle minusvalenze compensabili residue (${E(minus)})`,true);return;}
-  if(mc>pl){toast('Non puoi compensare più della plusvalenza realizzata',true);return;}
+  if(pl>0 && mc>pl){toast('Non puoi compensare più della plusvalenza realizzata',true);return;}
   const bi=pl-mc,tax=bi>0?bi*0.26:0,net=ric-tax;
   ven.push({id:Date.now(),data,isin,titolo,tipo,qty,prez,comm,pmc,pl,mc,tax,net,dossier_id});
   save();rendVen();rendCed();updMinus();updDash();
@@ -2303,7 +2303,7 @@ function previewVenEdit(){
     blocked=true; msg=`⚠ Non puoi compensare minusvalenze su una vendita in perdita (o in pareggio).`;
   } else if(mc>minus){
     blocked=true; msg=`⚠ Importo superiore alle minusvalenze compensabili residue (${E(minus)}).`;
-  } else if(mc>pl){
+  } else if(pl>0 && mc>pl){
     blocked=true; msg=`⚠ Non puoi compensare più della plusvalenza realizzata (${E(pl)}).`;
   }
   const mcEff = blocked ? (origRec?.mc||0) : mc;
@@ -2340,7 +2340,7 @@ function saveEditVen(id){
   if(mc<0) mc=0;
   if(pl<=0 && mc>0){toast('Non puoi compensare minusvalenze su una vendita in perdita',true);return;}
   if(mc>minus){toast(`Importo superiore alle minusvalenze compensabili residue (${E(minus)})`,true);return;}
-  if(mc>pl){toast('Non puoi compensare più della plusvalenza realizzata',true);return;}
+  if(pl>0 && mc>pl){toast('Non puoi compensare più della plusvalenza realizzata',true);return;}
 
   const bi=pl-mc, tax=bi>0?bi*0.26:0, net=ric-tax;
   ven[idx]={...ven[idx],data:document.getElementById('em-data').value,qty,prez,comm,pmc,pl,mc,tax,net};
