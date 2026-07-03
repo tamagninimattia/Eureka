@@ -1043,10 +1043,10 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
           <div class="fgroup"><label class="fl">Dossier</label><select id="v-dossier"><option value="">— seleziona dossier —</option></select></div>
           <div class="fgroup"><label class="fl">Titolo</label><select id="v-tit" onchange="updPMC()"><option value="">— seleziona —</option></select></div>
           <div class="fgroup"><label class="fl">Quantità venduta</label><input type="number" id="v-qty" step="1" placeholder="0" oninput="calcVen()"></div>
-          <div class="fgroup" style="grid-column:span 2;max-width:215px;justify-self:start;"><label class="fl">Prezzo vendita unit. (€)</label><input type="number" id="v-prez" step="0.0001" placeholder="0,0000" oninput="calcVen()"></div>
+          <div class="fgroup"><label class="fl">Prezzo vendita (€)</label><input type="number" id="v-prez" step="0.0001" placeholder="0,0000" oninput="calcVen()"></div>
           <div class="fgroup"><label class="fl">Commissioni (€)</label><input type="number" id="v-comm" step="0.01" placeholder="0,00" oninput="calcVen()"></div>
           <div class="fgroup"><label class="fl">PMC (€/unit) <span class="fl-b">AUTO</span></label><input type="number" id="v-pmc" step="0.0001" placeholder="0,0000" oninput="calcVen()"></div>
-          <div class="fgroup" style="grid-column:span 2;max-width:174px;justify-self:start;">
+          <div class="fgroup">
             <label class="fl">Minus compensate (€) <span class="fl-b">AUTO</span></label>
             <input type="number" id="v-mc" step="0.01" placeholder="0,00" oninput="calcVen()">
             <div id="v-mc-hint" style="font-family:var(--mono);font-size:10px;color:var(--text3);"></div>
@@ -2261,7 +2261,7 @@ function editVen(id){
   const body=`<div class="fg">
     ${fg('data','Data vendita','date',v.data)}
     ${fg('qty','Quantità venduta','number',v.qty,'1','0')}
-    ${fg('prez','Prezzo vendita unit. (€)','number',v.prez,'0.0001','0,0000')}
+    ${fg('prez','Prezzo vendita (€)','number',v.prez,'0.0001','0,0000')}
     ${fg('comm','Commissioni (€)','number',v.comm,'0.01','0,00')}
     ${fg('pmc','PMC (€/unit)','number',v.pmc,'0.0001','0,0000')}
     ${fg('mc','Minus compensate (€)','number',v.mc,'0.01','0,00')}
