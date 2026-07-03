@@ -2040,7 +2040,7 @@ function addVen(){
   if(pl>0&&minus>0){mc=Math.min(minus,pl);bi=pl-mc;}
   const tax=bi>0?bi*0.26:0,net=ric-tax;
   ven.push({id:Date.now(),data,isin,titolo,tipo,qty,prez,comm,pmc,pl,mc,tax,net,dossier_id});
-  save();rendVen();rendCed();updMinus();
+  save();rendVen();rendCed();updMinus();updDash();
   cUpsert('vendite',ven[ven.length-1]);
   toast('Vendita registrata ✓');
   ['v-qty','v-prez','v-comm','v-pmc'].forEach(id=>document.getElementById(id).value='');
@@ -2079,7 +2079,7 @@ function rendVen(){
     </td>
   </tr>`).join('');
 }
-function delVen(id){if(!confirm("Eliminare?"))return;const r=ven.find(v=>v.id===id);ven=ven.filter(v=>v.id!==id);save();rendVen();rendCed();updMinus();toast("Eliminata");if(r)cDelete("vendite",id,r.sb_id);}
+function delVen(id){if(!confirm("Eliminare?"))return;const r=ven.find(v=>v.id===id);ven=ven.filter(v=>v.id!==id);save();rendVen();rendCed();updMinus();updDash();toast("Eliminata");if(r)cDelete("vendite",id,r.sb_id);}
 
 /* ══ MODIFICA RECORD ══ */
 let _editCtx=null; // {type:'acq'|'ced'|'ven', id}
@@ -2256,7 +2256,7 @@ function saveEditVen(id){
   if(pl>0&&minus>0){mc=Math.min(minus,pl);bi=pl-mc;}
   const tax=bi>0?bi*0.26:0, net=ric-tax;
   ven[idx]={...ven[idx],data:document.getElementById('em-data').value,qty,prez,comm,pmc,pl,mc,tax,net};
-  save();rendVen();updMinus();closeEdit();toast('Vendita aggiornata ✓');
+  save();rendVen();updMinus();updDash();closeEdit();toast('Vendita aggiornata ✓');
 }
 
 /* dispatcher */
@@ -2404,34 +2404,56 @@ function buildFlows(fAcq, fVen, fCed, fCos, inclComm, inclTax, mktVal, inclTaxLa
 }
 
 function calcDuration(fAcq, fVen){
-  // Durata media ponderata: per ogni posizione ancora aperta
-  // duration_i = (oggi - data_acquisto_i) in anni, pesata per capitale investito
-  // Per vendite già chiuse: (data_vendita - data_acquisto) pesata per capitale
+  // Durata media ponderata per capitale, con matching FIFO acquisto/vendita:
+  // - la quota di un lotto d'acquisto che risulta VENDUTA pesa per (data_vendita - data_acquisto)
+  // - la quota ancora IN PORTAFOGLIO pesa per (oggi - data_acquisto)
+  // In questo modo ogni movimento di vendita viene correttamente riflesso nella duration,
+  // senza contare due volte lo stesso capitale (bug della versione precedente).
   const today=Date.now();
   const MS_YEAR=365.25*24*3600*1000;
   let sumPeso=0, sumDur=0;
 
-  // Posizioni aperte: usa getPort per ottenere il capitale ancora investito
-  const port=getPort();
-  Object.values(port).filter(p=>p.qty>0&&filterKey(p.isin||p.titolo)).forEach(p=>{
-    // trova data media acquisto ponderata per capitale
-    const acqFilt=fAcq.filter(a=>(a.isin||a.titolo)===(p.isin||p.titolo));
-    acqFilt.forEach(a=>{
-      const cap=+a.prezzo*+a.qty;
-      const durAnni=(today-new Date(a.data).getTime())/MS_YEAR;
-      sumDur+=cap*durAnni;
-      sumPeso+=cap;
-    });
-  });
+  const keys=new Set([
+    ...fAcq.map(a=>a.isin||a.titolo),
+    ...fVen.map(v=>v.isin||v.titolo)
+  ]);
 
-  // Vendite chiuse
-  fVen.forEach(v=>{
-    const acqFilt=fAcq.filter(a=>(a.isin||a.titolo)===(v.isin||v.titolo));
-    acqFilt.forEach(a=>{
-      const cap=+a.prezzo*+a.qty;
-      const durAnni=(new Date(v.data).getTime()-new Date(a.data).getTime())/MS_YEAR;
-      if(durAnni>0){sumDur+=cap*durAnni;sumPeso+=cap;}
+  keys.forEach(key=>{
+    // Lotti d'acquisto in ordine cronologico, con qty residua mutabile
+    const lots=fAcq
+      .filter(a=>(a.isin||a.titolo)===key)
+      .map(a=>({data:new Date(a.data).getTime(), prezzo:+a.prezzo, qty:+a.qty}))
+      .sort((x,y)=>x.data-y.data);
+
+    // Vendite in ordine cronologico
+    const vendite=fVen
+      .filter(v=>(v.isin||v.titolo)===key)
+      .map(v=>({data:new Date(v.data).getTime(), qty:+v.qty}))
+      .sort((x,y)=>x.data-y.data);
+
+    let li=0;
+    vendite.forEach(v=>{
+      let qtyDaVendere=v.qty;
+      while(qtyDaVendere>1e-9 && li<lots.length){
+        const lot=lots[li];
+        const qtyUsata=Math.min(lot.qty,qtyDaVendere);
+        const cap=lot.prezzo*qtyUsata;
+        const durAnni=(v.data-lot.data)/MS_YEAR;
+        if(durAnni>0){ sumDur+=cap*durAnni; sumPeso+=cap; }
+        lot.qty-=qtyUsata;
+        qtyDaVendere-=qtyUsata;
+        if(lot.qty<=1e-9) li++;
+      }
     });
+
+    // Quota residua ancora in portafoglio (dai lotti non consumati dalle vendite)
+    for(let i=li;i<lots.length;i++){
+      const lot=lots[i];
+      if(lot.qty<=1e-9) continue;
+      const cap=lot.prezzo*lot.qty;
+      const durAnni=(today-lot.data)/MS_YEAR;
+      if(durAnni>0){ sumDur+=cap*durAnni; sumPeso+=cap; }
+    }
   });
 
   return sumPeso>0?sumDur/sumPeso:null;
@@ -2603,7 +2625,9 @@ function updDashKPI(){
   // Totale costi per il calcolo Net Return (commissioni + imposte + altro)
   const totCos = (inclComm?cosComm:0) + (inclTax?cosImp:0) + cosAltro;
 
-  const totInv = filteredAcq.reduce((s,a)=>{
+  // Capitale storicamente investito (TUTTI gli acquisti, anche quelli poi venduti)
+  // — usato solo per il calcolo del Net Return complessivo, non per la card "Capitale investito"
+  const totInvStorico = filteredAcq.reduce((s,a)=>{
     let v=+a.prezzo*+a.qty;
     if(inclComm) v+=(+a.comm||0);
     if(inclTax)  v+=(+a.tobin||0);
@@ -2654,9 +2678,17 @@ function updDashKPI(){
   setHid('mkt-tax-lat', anyPrice?(inclTaxLat?totTaxLatRaw:0):'');
   setHid('mkt-comm-lat',anyPrice?(inclCommLat?totCommLatRaw:0):'');
 
+  // Capitale investito ATTUALMENTE (costo storico al netto dei titoli venduti)
+  // Deve sempre combaciare col totale "Valore di carico" della sezione portafoglio,
+  // quindi usiamo p.costo di getPort() (già nettato per le vendite via PMC ponderato)
+  const totInvAperto = filteredISIN.reduce((s,key)=>{
+    const p=port[key];
+    return (p && p.qty>0) ? s + p.costo : s;
+  },0);
+
   // Capitale investito
   const capInvEl=document.getElementById('m-cap-inv');
-  if(capInvEl){capInvEl.textContent=E(totInv);}
+  if(capInvEl){capInvEl.textContent=E(totInvAperto);}
 
   // Commissioni: acquisti + vendite + costi tipo commissione + latenti
   const commAcqFilt=filteredAcq.reduce((s,a)=>s+(+a.comm||0),0);
@@ -2687,9 +2719,9 @@ function updDashKPI(){
     taxEl.style.opacity=hasSomething?'1':'0.4';
   }
 
-  // Realized P&L
+  // Realized P&L — utile/perdita netto (al netto tasse), NON l'importo netto liquidato
   const filteredVenAll=ven.filter(v=>filterKey(v.isin||v.titolo));
-  const plVenNetto=filteredVenAll.reduce((s,v)=>s+v.net,0);
+  const plVenNetto=filteredVenAll.reduce((s,v)=>s+((v.pl||0)-(v.tax||0)),0);
   const plVenEl=document.getElementById('m-pl-vendite');
   if(plVenEl) plVenEl.textContent=E(plVenNetto);
   setHeroCell('cell-pl-vendite','label-pl-vendite','m-pl-vendite',plVenNetto,true);
@@ -2719,7 +2751,7 @@ function updDashKPI(){
 
   // Risultato netto
   const inclCostiGlobali = fType==='all'&&fSector==='all';
-  const risNetto = totCed + totVen + totLiq - totInv - (inclCostiGlobali ? totCos : 0);
+  const risNetto = totCed + totVen + totLiq - totInvStorico - (inclCostiGlobali ? totCos : 0);
   const rnEl = document.getElementById('m-risultato-netto');
   if(rnEl){
     rnEl.textContent = anyPrice ? E(risNetto) : '—';
