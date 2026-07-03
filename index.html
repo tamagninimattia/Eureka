@@ -710,8 +710,8 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
           </div>
 
         </div>
-        <!-- Riga 5 card: Duration | Capitale | Costi | Commissioni realizzate | Tasse realizzate -->
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:10px;">
+        <!-- Riga 5 card: Duration | Capitale | Costi | Commissioni realizzate | Tasse realizzate | Minus compensabili -->
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:10px;">
 
           <!-- 1. Duration -->
           <div class="metric-card" style="padding:12px 16px;position:relative;overflow:hidden;">
@@ -744,7 +744,14 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
             <div id="m-tax-tot" style="font-family:var(--serif);font-size:20px;color:var(--red);line-height:1;letter-spacing:-0.01em;margin-top:6px;">—</div>
           </div>
 
-        </div><!-- /5-card row -->
+          <!-- 6. Minusvalenze compensabili -->
+          <div class="metric-card" style="padding:12px 16px;position:relative;overflow:hidden;">
+            <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--green),transparent);opacity:0.4;"></div>
+            <div class="metric-label" style="color:var(--green);">Minus compensabili</div>
+            <div id="m-minus-comp" style="font-family:var(--serif);font-size:20px;color:var(--green);line-height:1;letter-spacing:-0.01em;margin-top:6px;">—</div>
+          </div>
+
+        </div><!-- /6-card row -->
       </div><!-- /metric-panel -->
       </div><!-- /flex row metriche+torta -->
 
@@ -2717,6 +2724,15 @@ function updDashKPI(){
     taxEl.textContent=hasSomething?E(totTaxTot):'—';
     taxEl.style.color=hasSomething?'var(--red)':'var(--text3)';
     taxEl.style.opacity=hasSomething?'1':'0.4';
+  }
+
+  // Minusvalenze compensabili residue (zainetto fiscale) — dato di posizione fiscale
+  // complessiva, non filtrato per tipo/settore/titolo/dossier
+  const minusEl=document.getElementById('m-minus-comp');
+  if(minusEl){
+    minusEl.textContent=E(minR);
+    minusEl.style.color=minR>0?'var(--green)':'var(--text3)';
+    minusEl.style.opacity=minR>0?'1':'0.4';
   }
 
   // Realized P&L — utile/perdita netto (al netto tasse), NON l'importo netto liquidato
