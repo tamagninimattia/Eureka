@@ -1043,9 +1043,14 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
           <div class="fgroup"><label class="fl">Dossier</label><select id="v-dossier"><option value="">— seleziona dossier —</option></select></div>
           <div class="fgroup"><label class="fl">Titolo</label><select id="v-tit" onchange="updPMC()"><option value="">— seleziona —</option></select></div>
           <div class="fgroup"><label class="fl">Quantità venduta</label><input type="number" id="v-qty" step="1" placeholder="0" oninput="calcVen()"></div>
-          <div class="fgroup"><label class="fl">Prezzo vendita unit. (€)</label><input type="number" id="v-prez" step="0.0001" placeholder="0,0000" oninput="calcVen()"></div>
+          <div class="fgroup" style="grid-column:span 2;"><label class="fl">Prezzo vendita unit. (€)</label><input type="number" id="v-prez" step="0.0001" placeholder="0,0000" oninput="calcVen()"></div>
           <div class="fgroup"><label class="fl">Commissioni (€)</label><input type="number" id="v-comm" step="0.01" placeholder="0,00" oninput="calcVen()"></div>
-          <div class="fgroup"><label class="fl">PMC (€/unit) <span class="fl-b">AUTO</span></label><input type="number" id="v-pmc" readonly placeholder="—"></div>
+          <div class="fgroup"><label class="fl">PMC (€/unit) <span class="fl-b">AUTO</span></label><input type="number" id="v-pmc" step="0.0001" placeholder="0,0000" oninput="calcVen()"></div>
+          <div class="fgroup">
+            <label class="fl">Minus compensate (€) <span class="fl-b">AUTO</span></label>
+            <input type="number" id="v-mc" step="0.01" placeholder="0,00" oninput="calcVen()">
+            <div id="v-mc-hint" style="font-family:var(--mono);font-size:10px;color:var(--text3);"></div>
+          </div>
         </div>
         <div class="rbox" id="v-rbox" style="display:none">
           <div class="ri"><div class="rl">Ricavo netto</div><div class="rv" id="rv-ric">—</div></div>
@@ -1057,7 +1062,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
           <div class="ri"><div class="rl">Netto liquidato</div><div class="rv pos" id="rv-net">—</div></div>
         </div>
         <div class="abox" id="v-alert" style="display:none"></div>
-        <div class="fa"><button class="btn" onclick="addVen()">+ Registra vendita</button></div>
+        <div class="fa"><button class="btn" id="v-submit-btn" onclick="addVen()">+ Registra vendita</button></div>
       </div>
       <div class="card">
         <div class="ch">
@@ -1125,7 +1130,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
     <div class="emodal-sub" id="em-sub"></div>
     <div id="em-body"></div>
     <div style="display:flex;gap:10px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);">
-      <button class="btn" onclick="saveEdit()">✓ Salva modifiche</button>
+      <button class="btn" id="em-save-btn" onclick="saveEdit()">✓ Salva modifiche</button>
       <button class="btn-ghost" onclick="closeEdit()">Annulla</button>
     </div>
   </div>
@@ -2012,22 +2017,50 @@ function calcVen(){
   const prez=parseFloat(document.getElementById('v-prez').value)||0;
   const comm=parseFloat(document.getElementById('v-comm').value)||0;
   const pmc=parseFloat(document.getElementById('v-pmc').value)||0;
+  const mcInput=document.getElementById('v-mc');
   const box=document.getElementById('v-rbox'),al=document.getElementById('v-alert');
-  if(!qty||!prez||!pmc){box.style.display='none';al.style.display='none';return;}
+  const hint=document.getElementById('v-mc-hint');
+  const btn=document.getElementById('v-submit-btn');
+  if(!qty||!prez||!pmc){
+    box.style.display='none';al.style.display='none';al.className='abox';
+    if(hint) hint.textContent='';
+    if(btn) btn.disabled=false;
+    return;
+  }
   const ric=prez*qty-comm,co=pmc*qty,pl=ric-co;
-  const minus=getMinus();let bi=pl,mc=0;
-  if(pl>0&&minus>0){mc=Math.min(minus,pl);bi=pl-mc;}
-  const tax=bi>0?bi*0.26:0,net=ric-tax;
+  const minus=getMinus(); // minusvalenze compensabili residue prima di questa vendita
+  const mcSugg=pl>0?Math.min(minus,pl):0;
+  let mc = mcInput.value===''? mcSugg : (parseFloat(mcInput.value)||0);
+  if(mc<0) mc=0;
+
+  let blocked=false, msg='';
+  if(pl<=0 && mc>0){
+    blocked=true; msg=`⚠ Non puoi compensare minusvalenze su una vendita in perdita (o in pareggio).`;
+  } else if(mc>minus){
+    blocked=true; msg=`⚠ Importo superiore alle minusvalenze compensabili residue (${E(minus)}). Riduci l'importo per procedere.`;
+  } else if(mc>pl){
+    blocked=true; msg=`⚠ Non puoi compensare più della plusvalenza realizzata (${E(pl)}).`;
+  }
+  const mcEff = blocked ? 0 : mc;
+  const bi=pl-mcEff,tax=bi>0?bi*0.26:0,net=ric-tax;
   box.style.display='grid';
   document.getElementById('rv-ric').textContent=E(ric);
   document.getElementById('rv-cos').textContent=E(co);
   const plEl=document.getElementById('rv-pl');plEl.textContent=E(pl);plEl.className='rv '+(pl>=0?'pos':'neg');
-  document.getElementById('rv-mc').textContent=E(mc);
+  document.getElementById('rv-mc').textContent=E(mcEff);
   document.getElementById('rv-bi').textContent=E(bi);
   document.getElementById('rv-tax').textContent=E(tax);
   const nEl=document.getElementById('rv-net');nEl.textContent=E(net);nEl.className='rv '+(net>=0?'pos':'neg');
-  if(mc>0){al.style.display='block';al.textContent=`ℹ Compensate minusvalenze per ${E(mc)} — residue dopo l'operazione: ${E(minus-mc)}`;}
+
+  if(hint) hint.textContent = pl>0
+    ? `Suggerito: ${E(mcSugg)} · Residuo disponibile: ${E(minus)}`
+    : `Residuo disponibile: ${E(minus)}`;
+
+  if(blocked){ al.className='abox warn'; al.style.display='block'; al.textContent=msg; }
+  else if(mcEff>0){ al.className='abox'; al.style.display='block'; al.textContent=`ℹ Compensate minusvalenze per ${E(mcEff)} — residue dopo l'operazione: ${E(minus-mcEff)}`; }
   else al.style.display='none';
+
+  if(btn) btn.disabled=blocked;
 }
 function addVen(){
   const data=document.getElementById('v-data').value||today();
@@ -2043,17 +2076,25 @@ function addVen(){
   const tit=acq.find(a=>(a.isin||a.titolo)===isin);
   const titolo=tit?.titolo||isin;const tipo=tit?.tipo||'';
   const ric=prez*qty-comm,co=pmc*qty,pl=ric-co;
-  const minus=getMinus();let bi=pl,mc=0;
-  if(pl>0&&minus>0){mc=Math.min(minus,pl);bi=pl-mc;}
-  const tax=bi>0?bi*0.26:0,net=ric-tax;
+  const minus=getMinus();
+  const mcSugg=pl>0?Math.min(minus,pl):0;
+  const mcInputEl=document.getElementById('v-mc');
+  let mc = mcInputEl.value===''? mcSugg : (parseFloat(mcInputEl.value)||0);
+  if(mc<0) mc=0;
+  if(pl<=0 && mc>0){toast('Non puoi compensare minusvalenze su una vendita in perdita',true);return;}
+  if(mc>minus){toast(`Importo superiore alle minusvalenze compensabili residue (${E(minus)})`,true);return;}
+  if(mc>pl){toast('Non puoi compensare più della plusvalenza realizzata',true);return;}
+  const bi=pl-mc,tax=bi>0?bi*0.26:0,net=ric-tax;
   ven.push({id:Date.now(),data,isin,titolo,tipo,qty,prez,comm,pmc,pl,mc,tax,net,dossier_id});
   save();rendVen();rendCed();updMinus();updDash();
   cUpsert('vendite',ven[ven.length-1]);
   toast('Vendita registrata ✓');
-  ['v-qty','v-prez','v-comm','v-pmc'].forEach(id=>document.getElementById(id).value='');
+  ['v-qty','v-prez','v-comm','v-pmc','v-mc'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('v-tit').value='';
   document.getElementById('v-rbox').style.display='none';
   document.getElementById('v-alert').style.display='none';
+  const hint=document.getElementById('v-mc-hint'); if(hint) hint.textContent='';
+  const btn=document.getElementById('v-submit-btn'); if(btn) btn.disabled=false;
 }
 function rendVen(){
   const tb=document.getElementById('tb-ven');
@@ -2110,6 +2151,8 @@ function openEdit(title,sub,bodyHtml,ctx){
   document.getElementById('em-sub').textContent=sub;
   document.getElementById('em-body').innerHTML=bodyHtml;
   _editCtx=ctx;
+  const saveBtn=document.getElementById('em-save-btn');
+  if(saveBtn) saveBtn.disabled=false;
   document.getElementById('emodal').classList.add('show');
 }
 
@@ -2221,15 +2264,17 @@ function editVen(id){
     ${fg('prez','Prezzo vendita unit. (€)','number',v.prez,'0.0001','0,0000')}
     ${fg('comm','Commissioni (€)','number',v.comm,'0.01','0,00')}
     ${fg('pmc','PMC (€/unit)','number',v.pmc,'0.0001','0,0000')}
+    ${fg('mc','Minus compensate (€)','number',v.mc,'0.01','0,00')}
   </div>
   <div class="emodal-computed" id="em-ven-preview">
     <div class="ec-item"><div class="ec-l">Ricavo netto</div><div class="ec-v" id="epv-ric">—</div></div>
     <div class="ec-item"><div class="ec-l">P&L lordo</div><div class="ec-v" id="epv-pl">—</div></div>
     <div class="ec-item"><div class="ec-l">Tasse (26%)</div><div class="ec-v neg" id="epv-tax">—</div></div>
     <div class="ec-item"><div class="ec-l">Netto liquidato</div><div class="ec-v" id="epv-net">—</div></div>
-  </div>`;
+  </div>
+  <div class="abox" id="em-ven-alert" style="display:none"></div>`;
   openEdit('Modifica <em>Vendita</em>','// '+v.titolo+' · id: '+id,body,{type:'ven',id});
-  ['em-qty','em-prez','em-comm','em-pmc'].forEach(eid=>{
+  ['em-qty','em-prez','em-comm','em-pmc','em-mc'].forEach(eid=>{
     document.getElementById(eid)?.addEventListener('input',previewVenEdit);
   });
   previewVenEdit();
@@ -2240,15 +2285,42 @@ function previewVenEdit(){
   const prez=parseFloat(document.getElementById('em-prez')?.value)||0;
   const comm=parseFloat(document.getElementById('em-comm')?.value)||0;
   const pmc=parseFloat(document.getElementById('em-pmc')?.value)||0;
+  const mcInput=document.getElementById('em-mc');
+  const al=document.getElementById('em-ven-alert');
+  const saveBtn=document.getElementById('em-save-btn');
   const ric=prez*qty-comm, co=pmc*qty, pl=ric-co;
-  const minus=getMinus();let bi=pl,mc=0;
-  if(pl>0&&minus>0){mc=Math.min(minus,pl);bi=pl-mc;}
-  const tax=bi>0?bi*0.26:0, net=ric-tax;
+
+  // Le minusvalenze già assorbite da QUESTO record vanno riaccreditate al monte residuo
+  // disponibile, perché stiamo per ridefinirle
+  const origRec = _editCtx ? ven.find(x=>x.id===_editCtx.id) : null;
+  const minus = getMinus() + (origRec?.mc||0);
+
+  let mc = mcInput && mcInput.value!=='' ? (parseFloat(mcInput.value)||0) : (pl>0?Math.min(minus,pl):0);
+  if(mc<0) mc=0;
+
+  let blocked=false, msg='';
+  if(pl<=0 && mc>0){
+    blocked=true; msg=`⚠ Non puoi compensare minusvalenze su una vendita in perdita (o in pareggio).`;
+  } else if(mc>minus){
+    blocked=true; msg=`⚠ Importo superiore alle minusvalenze compensabili residue (${E(minus)}).`;
+  } else if(mc>pl){
+    blocked=true; msg=`⚠ Non puoi compensare più della plusvalenza realizzata (${E(pl)}).`;
+  }
+  const mcEff = blocked ? (origRec?.mc||0) : mc;
+  const bi=pl-mcEff, tax=bi>0?bi*0.26:0, net=ric-tax;
+
   const set=(eid,val,cls)=>{const el=document.getElementById(eid);if(el){el.textContent=E(val);if(cls)el.className='ec-v '+cls;}};
   set('epv-ric',ric);
   set('epv-pl',pl,pl>=0?'pos':'neg');
   set('epv-tax',tax,'neg');
   set('epv-net',net,net>=0?'pos':'neg');
+
+  if(al){
+    if(blocked){ al.className='abox warn'; al.style.display='block'; al.textContent=msg; }
+    else if(mc>0){ al.className='abox'; al.style.display='block'; al.textContent=`ℹ Compensate minusvalenze per ${E(mc)} — residue dopo l'operazione: ${E(minus-mc)}`; }
+    else { al.style.display='none'; }
+  }
+  if(saveBtn) saveBtn.disabled=blocked;
 }
 
 function saveEditVen(id){
@@ -2259,9 +2331,18 @@ function saveEditVen(id){
   const pmc=parseFloat(document.getElementById('em-pmc').value);
   if(isNaN(qty)||isNaN(prez)||isNaN(pmc)||qty<=0){toast('Compila tutti i campi',true);return;}
   const ric=prez*qty-comm, co=pmc*qty, pl=ric-co;
-  const minus=getMinus();let bi=pl,mc=0;
-  if(pl>0&&minus>0){mc=Math.min(minus,pl);bi=pl-mc;}
-  const tax=bi>0?bi*0.26:0, net=ric-tax;
+
+  // Riaccredita al monte residuo la quota di minusvalenze già assorbita da QUESTO record
+  const origRec=ven[idx];
+  const minus=getMinus()+(origRec.mc||0);
+  const mcInput=document.getElementById('em-mc');
+  let mc = mcInput && mcInput.value!=='' ? (parseFloat(mcInput.value)||0) : (pl>0?Math.min(minus,pl):0);
+  if(mc<0) mc=0;
+  if(pl<=0 && mc>0){toast('Non puoi compensare minusvalenze su una vendita in perdita',true);return;}
+  if(mc>minus){toast(`Importo superiore alle minusvalenze compensabili residue (${E(minus)})`,true);return;}
+  if(mc>pl){toast('Non puoi compensare più della plusvalenza realizzata',true);return;}
+
+  const bi=pl-mc, tax=bi>0?bi*0.26:0, net=ric-tax;
   ven[idx]={...ven[idx],data:document.getElementById('em-data').value,qty,prez,comm,pmc,pl,mc,tax,net};
   save();rendVen();updMinus();updDash();closeEdit();toast('Vendita aggiornata ✓');
 }
