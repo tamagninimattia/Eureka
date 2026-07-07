@@ -1579,6 +1579,42 @@ function qtyAtDate(isin,ds){
 function getMinus(){
   let m=0;ven.forEach(v=>{if(v.pl<0)m+=Math.abs(v.pl);else m-=v.mc||0;});return Math.max(0,m);
 }
+function calcPLContabilePerVendita(){
+  // Ricalcola, per ogni vendita, il P&L CONTABILE (cioè al netto del PMC che include
+  // anche la Tobin tax), riproducendo in ordine cronologico l'intera storia acquisti/vendite
+  // per ciascun titolo. Serve perché sul singolo record di vendita salviamo solo il P&L
+  // FISCALE (calcolato col PMC che l'utente ha indicato in form, di norma senza Tobin) —
+  // usato per tasse/minusvalenze — che quindi NON coincide più con quello contabile
+  // quando sul titolo sono state pagate delle Tobin tax.
+  const out=new Map();
+  const keys=new Set([...acq.map(a=>a.isin||a.titolo), ...ven.map(v=>v.isin||v.titolo)]);
+
+  keys.forEach(key=>{
+    const eventi=[
+      ...acq.filter(a=>(a.isin||a.titolo)===key).map(a=>({tipo:'acq',data:new Date(a.data).getTime(),rec:a})),
+      ...ven.filter(v=>(v.isin||v.titolo)===key).map(v=>({tipo:'ven',data:new Date(v.data).getTime(),rec:v}))
+    ].sort((x,y)=>x.data-y.data);
+
+    let qty=0, costo=0; // costo CONTABILE (incl. Tobin + commissioni)
+    eventi.forEach(e=>{
+      if(e.tipo==='acq'){
+        const a=e.rec;
+        qty   += +a.qty;
+        costo += (+a.prezzo*+a.qty) + (+a.tobin||0) + (+a.comm||0);
+      } else {
+        const v=e.rec;
+        const pmcContabile = qty>0 ? costo/qty : 0;
+        const co = pmcContabile * +v.qty;
+        const ric = (+v.prez*+v.qty) - (+v.comm||0);
+        out.set(v.id, ric - co);
+        qty   -= +v.qty;
+        costo -= co;
+        if(qty<=0){qty=0;costo=0;}
+      }
+    });
+  });
+  return out;
+}
 function fillSelects(){
   const tit=[...new Map(acq.map(a=>[a.isin||a.titolo,{t:a.titolo,i:a.isin||a.titolo}])).values()];
   ['c-tit','v-tit'].forEach(id=>{
@@ -2819,9 +2855,14 @@ function updDashKPI(){
     minusEl.style.opacity=minR>0?'1':'0.4';
   }
 
-  // Realized P&L — utile/perdita netto (al netto tasse), NON l'importo netto liquidato
+  // Realized P&L — utile/perdita CONTABILE (con Tobin) al netto delle tasse REALMENTE pagate
+  // (le tasse restano calcolate su base fiscale, cioè senza Tobin, come da normativa)
   const filteredVenAll=ven.filter(v=>filterKey(v.isin||v.titolo));
-  const plVenNetto=filteredVenAll.reduce((s,v)=>s+((v.pl||0)-(v.tax||0)),0);
+  const plContabileMap=calcPLContabilePerVendita();
+  const plVenNetto=filteredVenAll.reduce((s,v)=>{
+    const plC = plContabileMap.has(v.id) ? plContabileMap.get(v.id) : (v.pl||0);
+    return s + (plC - (v.tax||0));
+  },0);
   const plVenEl=document.getElementById('m-pl-vendite');
   if(plVenEl) plVenEl.textContent=E(plVenNetto);
   setHeroCell('cell-pl-vendite','label-pl-vendite','m-pl-vendite',plVenNetto,true);
