@@ -2009,7 +2009,10 @@ function updMinus(){const el=document.getElementById('minus-res');if(el)el.textC
 function updPMC(){
   const isin=document.getElementById('v-tit').value;if(!isin)return;
   const p=getPort()[isin];
-  document.getElementById('v-pmc').value=(p&&p.qty>0)?(p.costo/p.qty).toFixed(4):'';
+  // Proposto ai fini fiscali: PMC SENZA Tobin tax (costoFiscale), non il PMC contabile.
+  // In assenza di Tobin i due coincidono; con Tobin, la plus/minus fiscale (qui) diverge
+  // da quella contabile (Dashboard) esattamente dell'importo della Tobin.
+  document.getElementById('v-pmc').value=(p&&p.qty>0)?(p.costoFiscale/p.qty).toFixed(4):'';
   calcVen();
 }
 function calcVen(){
