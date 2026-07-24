@@ -2277,7 +2277,7 @@ function showCommInfo(){
     ? `<div style="margin-bottom:6px;color:var(--text2);font-size:11px;">Commissioni REALIZZATE (movimenti già registrati) — attive: <b style="color:var(--text);">sì</b> <span style="opacity:0.7;">(interruttore "Commissioni")</span></div>
        ${row('Su acquisti', d.commAcqFilt, d.nAcq+' acquisti nel filtro corrente')}
        ${row('Su vendite', d.commVenFilt, d.nVen+' vendite nel filtro corrente')}
-       ${row('Costi di mantenimento tipo "commissione"', d.cosComm, 'NON filtrati per titolo/settore/dossier: sono costi di conto, non legati a un singolo titolo')}
+       ${row('Costi di mantenimento tipo "commissione"', d.cosComm, 'Filtrabili solo per Dossier (non per titolo/settore, poiché non sono legati a un singolo titolo)')}
        ${row('= Totale realizzate', d.totCommReal)}`
     : `<div style="color:var(--text2);font-size:11px;padding:8px 0;">Commissioni REALIZZATE — interruttore "Commissioni" <b style="color:var(--text);">disattivato</b>: non vengono calcolate né incluse nel totale.</div>`;
 
@@ -2324,7 +2324,7 @@ function showTaxInfo(){
        ${row('Tobin tax sugli acquisti', d.tobinFilt, d.nAcq+' acquisti nel filtro corrente')}
        ${row('Tasse su cedole/dividendi', d.taxCedFilt, d.nCed+' cedole nel filtro corrente')}
        ${row('Tasse sulle vendite (26%)', d.taxVenFilt, d.nVen+' vendite nel filtro corrente')}
-       ${row('Costi di mantenimento tipo "imposta"', d.cosImp, 'NON filtrati per titolo/settore/dossier: sono costi di conto, non legati a un singolo titolo')}
+       ${row('Costi di mantenimento tipo "imposta"', d.cosImp, 'Filtrabili solo per Dossier (non per titolo/settore, poiché non sono legati a un singolo titolo)')}
        ${row('= Totale realizzate', d.totTaxReal)}`
     : `<div style="color:var(--text2);font-size:11px;padding:8px 0;">Imposte REALIZZATE — interruttore "Imposte" <b style="color:var(--text);">disattivato</b>: non vengono calcolate né incluse nel totale.</div>`;
 
@@ -2367,7 +2367,7 @@ function showNetInfo(){
     </div>`;
 
   const costiNote = d.inclCostiGlobali
-    ? 'Sottratti per intero (nessun filtro Tipo/Settore attivo, quindi sono attribuibili a tutto il portafoglio)'
+    ? 'Sottratti per intero (nessun filtro Tipo/Settore attivo — i costi non sono legati a un titolo/settore specifico, ma vengono già filtrati per Dossier se quel filtro è attivo)'
     : 'NON sottratti: con un filtro Tipo o Settore attivo non è possibile attribuire proporzionalmente i costi di conto (commissioni/imposte/altro non legati a un titolo specifico) al sottoinsieme filtrato';
 
   const body=`
@@ -2816,8 +2816,13 @@ function rendCos(){
 
 function editCos(id){
   const k=cos.find(x=>x.id===id);if(!k)return;
+  const dossierOpts=dos.map(d=>`<option value="${d.id}"${String(d.id)===String(k.dossier_id)?' selected':''}>${d.nome}</option>`).join('');
   const body=`<div class="fg">
     <div class="fgroup"><label class="fl">Data</label><input type="date" id="em-cos-data" value="${k.data||''}"></div>
+    <div class="fgroup">
+      <label class="fl">Dossier</label>
+      <select id="em-cos-dossier"><option value="">— nessun dossier —</option>${dossierOpts}</select>
+    </div>
     <div class="fgroup">
       <label class="fl">Tipo</label>
       <select id="em-cos-tipo">
@@ -2838,8 +2843,10 @@ function saveEditCos(id){
   const tipo=document.getElementById('em-cos-tipo').value;
   const descrizione=document.getElementById('em-cos-desc').value.trim();
   const imp=parseFloat(document.getElementById('em-cos-imp').value);
+  const dossierVal=document.getElementById('em-cos-dossier')?.value;
+  const dossier_id=dossierVal?parseInt(dossierVal):null;
   if(!descrizione||isNaN(imp)){toast('Compila tutti i campi',true);return;}
-  cos[idx]={...cos[idx],data,tipo,descrizione,imp};
+  cos[idx]={...cos[idx],data,tipo,descrizione,imp,dossier_id};
   save();rendCos();updDash();
   if(SB_TOKEN) cUpsert('costi',cos[idx]);
   closeEdit();
@@ -3139,9 +3146,12 @@ function updDashKPI(){
   const inclCommLat = document.getElementById('tog-comm-lat')?.checked!==false;
 
   // Costi di mantenimento: commissioni e imposte separati per tipo
-  const cosComm = cos.filter(k=>k.tipo==='commissione').reduce((s,k)=>s+(+k.imp||0),0);
-  const cosImp  = cos.filter(k=>k.tipo==='imposta').reduce((s,k)=>s+(+k.imp||0),0);
-  const cosAltro= cos.filter(k=>k.tipo!=='commissione'&&k.tipo!=='imposta').reduce((s,k)=>s+(+k.imp||0),0);
+  // Costi di mantenimento: filtrati per Dossier (i costi non sono legati a un titolo/settore
+  // specifico, ma possono essere assegnati a un dossier, quindi il filtro Dossier si applica)
+  const cosFiltered = cos.filter(k=>fDossier==='all'||String(k.dossier_id)===String(fDossier));
+  const cosComm = cosFiltered.filter(k=>k.tipo==='commissione').reduce((s,k)=>s+(+k.imp||0),0);
+  const cosImp  = cosFiltered.filter(k=>k.tipo==='imposta').reduce((s,k)=>s+(+k.imp||0),0);
+  const cosAltro= cosFiltered.filter(k=>k.tipo!=='commissione'&&k.tipo!=='imposta').reduce((s,k)=>s+(+k.imp||0),0);
   // Totale costi per il calcolo Net Return (commissioni + imposte + altro)
   const totCos = (inclComm?cosComm:0) + (inclTax?cosImp:0) + cosAltro;
 
@@ -3491,6 +3501,21 @@ function updDash(){
       <td class="${v.pl>=0?'pos':'neg'}">${E(v.pl)}</td>
       <td class="neg">${E(v.tax)}</td><td class="${v.net>=0?'pos':'neg'}">${E(v.net)}</td>
     </tr>`).join('');
+  if(filteredVen.length){
+    const totPlV=filteredVen.reduce((s,v)=>s+(+v.pl||0),0);
+    const totTaxV=filteredVen.reduce((s,v)=>s+(+v.tax||0),0);
+    const totNetV=filteredVen.reduce((s,v)=>s+(+v.net||0),0);
+    const totRowV=document.createElement('tr');
+    totRowV.style.cssText='background:var(--bg3);border-top:2px solid var(--border2);';
+    totRowV.innerHTML=`
+      <td></td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">Totale</td>
+      <td></td><td></td><td></td><td></td>
+      <td class="${totPlV>=0?'pos':'neg'}" style="font-weight:600;">${E(totPlV)}</td>
+      <td class="neg" style="font-weight:600;">${E(totTaxV)}</td>
+      <td class="${totNetV>=0?'pos':'neg'}" style="font-weight:700;">${E(totNetV)}</td>`;
+    tbv.appendChild(totRowV);
+  }
 
   // Cedole storico: mostra tutte (incluse provvisorie) ma i totali usano solo quelle confermate
   const tbc=document.getElementById('tb-ced-r');
@@ -3507,11 +3532,40 @@ function updDash(){
         <td style="${isProv?'color:var(--gold);font-style:italic;':'color:var(--green);'}">${E(d.netto)}</td>
       </tr>`;
     }).join('');
+  if(allCedFilt.length){
+    const totNettoC=allCedFilt.filter(c=>!c.provvisoria).reduce((s,c)=>s+(+c.netto||0),0);
+    const totRowC=document.createElement('tr');
+    totRowC.style.cssText='background:var(--bg3);border-top:2px solid var(--border2);';
+    totRowC.innerHTML=`
+      <td></td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">Totale <span style="opacity:0.7;font-weight:400;">(confermate)</span></td>
+      <td></td>
+      <td class="${totNettoC>=0?'pos':'neg'}" style="font-weight:700;">${E(totNettoC)}</td>`;
+    tbc.appendChild(totRowC);
+  }
 
   // Costi (sempre globali)
   const tbk=document.getElementById('tb-cos-r');
   tbk.innerHTML=!cos.length?'<tr><td colspan="3" class="empty">Nessun costo</td></tr>':
     cos.slice().reverse().map(k=>`<tr><td class="muted">${k.data}</td><td>${k.descrizione||k.desc||'—'}</td><td class="neg">${E(k.imp)}</td></tr>`).join('');
+  if(cos.length){
+    const totImpK=cos.filter(k=>k.tipo==='imposta').reduce((s,k)=>s+(+k.imp||0),0);
+    const totCommK=cos.filter(k=>k.tipo==='commissione').reduce((s,k)=>s+(+k.imp||0),0);
+    const totGenK=cos.reduce((s,k)=>s+(+k.imp||0),0);
+    const subRowK=(label,val)=>`<tr style="background:var(--bg3);">
+        <td></td>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">${label}</td>
+        <td class="neg" style="font-weight:600;">${E(val)}</td>
+      </tr>`;
+    tbk.innerHTML += subRowK('Totale imposte', totImpK) + subRowK('Totale commissioni', totCommK);
+    const totRowK=document.createElement('tr');
+    totRowK.style.cssText='background:var(--bg3);border-top:2px solid var(--border2);';
+    totRowK.innerHTML=`
+      <td></td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">Totale generale</td>
+      <td class="neg" style="font-weight:700;">${E(totGenK)}</td>`;
+    tbk.appendChild(totRowK);
+  }
 
   // Metriche avanzate
   updMetrics();
