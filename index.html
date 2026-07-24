@@ -733,7 +733,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
           <!-- 4. Commissioni (tog-comm + tog-comm-lat) -->
           <div class="metric-card" id="card-comm-tot" onclick="showCommInfo()" style="padding:12px 16px;position:relative;overflow:hidden;cursor:pointer;" title="Clicca per vedere come è calcolato questo dato">
             <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--red),transparent);opacity:0.35;"></div>
-            <div class="metric-label" style="color:var(--red);">Commissioni <span style="opacity:0.5;font-size:10px;">ⓘ</span></div>
+            <div class="metric-label" style="color:var(--red);">Commissioni</div>
             <div id="m-comm-tot" style="font-family:var(--serif);font-size:20px;color:var(--red);line-height:1;letter-spacing:-0.01em;margin-top:6px;">—</div>
           </div>
 
@@ -1141,7 +1141,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
     <button class="emodal-close" onclick="closeInfoModal()">✕</button>
     <div class="emodal-title" id="im-title">Come è calcolato</div>
     <div class="emodal-sub" id="im-sub"></div>
-    <div id="im-body" style="font-family:var(--mono);font-size:12px;line-height:1.75;color:var(--text2);"></div>
+    <div id="im-body" style="font-family:var(--mono);font-size:12px;line-height:1.75;color:var(--text);"></div>
     <div style="display:flex;gap:10px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);">
       <button class="btn-ghost" onclick="closeInfoModal()">Chiudi</button>
     </div>
@@ -2213,31 +2213,38 @@ function showCommInfo(){
   } else filtri.push('Dossier: <b>Tutti</b>');
 
   const row=(label,val,note)=>`<div style="display:flex;justify-content:space-between;gap:16px;padding:5px 0;border-bottom:1px solid var(--border);">
-      <div>${label}${note?`<div style="font-size:10px;color:var(--text3);margin-top:2px;">${note}</div>`:''}</div>
-      <div style="white-space:nowrap;font-weight:600;">${E(val)}</div>
+      <div>${label}${note?`<div style="font-size:10px;color:var(--text2);margin-top:2px;">${note}</div>`:''}</div>
+      <div style="white-space:nowrap;font-weight:600;color:var(--text);">${E(val)}</div>
     </div>`;
 
+  const sezRealizzate = d.inclComm
+    ? `<div style="margin-bottom:6px;color:var(--text2);font-size:11px;">Commissioni REALIZZATE (movimenti già registrati) — attive: <b style="color:var(--text);">sì</b> <span style="opacity:0.7;">(interruttore "Commissioni")</span></div>
+       ${row('Su acquisti', d.commAcqFilt, d.nAcq+' acquisti nel filtro corrente')}
+       ${row('Su vendite', d.commVenFilt, d.nVen+' vendite nel filtro corrente')}
+       ${row('Costi di mantenimento tipo "commissione"', d.cosComm, 'NON filtrati per titolo/settore/dossier: sono costi di conto, non legati a un singolo titolo')}
+       ${row('= Totale realizzate', d.totCommReal)}`
+    : `<div style="color:var(--text2);font-size:11px;padding:8px 0;">Commissioni REALIZZATE — interruttore "Commissioni" <b style="color:var(--text);">disattivato</b>: non vengono calcolate né incluse nel totale.</div>`;
+
+  const sezLatenti = d.inclCommLat
+    ? `<div style="margin:14px 0 6px;color:var(--text2);font-size:11px;">Commissioni LATENTI (stima su posizioni ancora aperte) — attive: <b style="color:var(--text);">sì</b> <span style="opacity:0.7;">(interruttore "Commissioni latenti")</span></div>
+       ${row('Commissione stimata per vendita', d.globalComm, 'campo "Commissione di vendita stimata" impostato manualmente, applicato una volta per ciascuna delle '+d.nPosApert+' posizioni ancora aperte nel filtro corrente')}
+       ${row('= Totale latenti', d.totCommLatRaw)}`
+    : `<div style="margin-top:14px;color:var(--text2);font-size:11px;padding:8px 0;">Commissioni LATENTI — interruttore "Commissioni latenti" <b style="color:var(--text);">disattivato</b>: non vengono calcolate né incluse nel totale.</div>`;
+
   const body=`
-    <div style="margin-bottom:14px;padding:10px 12px;background:var(--bg3);border-radius:8px;font-size:11px;color:var(--text2);">
+    <div style="margin-bottom:14px;padding:10px 12px;background:var(--bg3);border-radius:8px;font-size:11px;color:var(--text);">
       <div style="opacity:0.7;margin-bottom:4px;">Filtri attivi sulla Dashboard</div>
       ${filtri.join(' · ')}
     </div>
 
-    <div style="margin-bottom:6px;color:var(--text3);font-size:11px;">Commissioni REALIZZATE (movimenti già registrati) — attive: <b>${d.inclComm?'sì':'no'}</b> <span style="opacity:0.6;">(interruttore "Commissioni")</span></div>
-    ${row('Su acquisti', d.commAcqFilt, d.nAcq+' acquisti nel filtro corrente')}
-    ${row('Su vendite', d.commVenFilt, d.nVen+' vendite nel filtro corrente')}
-    ${row('Costi di mantenimento tipo "commissione"', d.cosComm, 'NON filtrati per titolo/settore/dossier: sono costi di conto, non legati a un singolo titolo')}
-    ${row('= Totale realizzate', d.totCommReal)}
-
-    <div style="margin:14px 0 6px;color:var(--text3);font-size:11px;">Commissioni LATENTI (stima su posizioni ancora aperte) — attive: <b>${d.inclCommLat?'sì':'no'}</b> <span style="opacity:0.6;">(interruttore "Commissioni latenti")</span></div>
-    ${row('Commissione stimata per vendita', d.globalComm, 'campo "Commissione di vendita stimata" impostato manualmente, applicato una volta per ciascuna delle '+d.nPosApert+' posizioni ancora aperte nel filtro corrente')}
-    ${row('= Totale latenti', d.totCommLatRaw)}
+    ${sezRealizzate}
+    ${sezLatenti}
 
     <div style="margin-top:14px;padding:10px 12px;background:var(--rdim);border-radius:8px;">
-      <div style="display:flex;justify-content:space-between;font-size:13px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text);">
         <b>Totale mostrato in card</b><b>${E(d.totCommTot)}</b>
       </div>
-      <div style="font-size:10px;color:var(--text3);margin-top:4px;">
+      <div style="font-size:10px;color:var(--text2);margin-top:4px;">
         = ${d.inclComm?'Totale realizzate':'0 (interruttore disattivato)'} + ${d.inclCommLat?'Totale latenti':'0 (interruttore disattivato)'}
       </div>
     </div>`;
