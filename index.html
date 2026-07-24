@@ -3544,14 +3544,16 @@ function updDash(){
     tbc.appendChild(totRowC);
   }
 
-  // Costi (sempre globali)
+  // Costi — filtrati per Dossier (coerente con le card Commissioni/Imposte),
+  // NON filtrati per Tipo/Settore/Titolo perché non sono legati a un singolo titolo
+  const cosFilteredDash = cos.filter(k=>fDossier==='all'||String(k.dossier_id)===String(fDossier));
   const tbk=document.getElementById('tb-cos-r');
-  tbk.innerHTML=!cos.length?'<tr><td colspan="3" class="empty">Nessun costo</td></tr>':
-    cos.slice().reverse().map(k=>`<tr><td class="muted">${k.data}</td><td>${k.descrizione||k.desc||'—'}</td><td class="neg">${E(k.imp)}</td></tr>`).join('');
-  if(cos.length){
-    const totImpK=cos.filter(k=>k.tipo==='imposta').reduce((s,k)=>s+(+k.imp||0),0);
-    const totCommK=cos.filter(k=>k.tipo==='commissione').reduce((s,k)=>s+(+k.imp||0),0);
-    const totGenK=cos.reduce((s,k)=>s+(+k.imp||0),0);
+  tbk.innerHTML=!cosFilteredDash.length?'<tr><td colspan="3" class="empty">Nessun costo'+(fDossier!=='all'?' per il dossier selezionato':'')+'</td></tr>':
+    cosFilteredDash.slice().reverse().map(k=>`<tr><td class="muted">${k.data}</td><td>${k.descrizione||k.desc||'—'}</td><td class="neg">${E(k.imp)}</td></tr>`).join('');
+  if(cosFilteredDash.length){
+    const totImpK=cosFilteredDash.filter(k=>k.tipo==='imposta').reduce((s,k)=>s+(+k.imp||0),0);
+    const totCommK=cosFilteredDash.filter(k=>k.tipo==='commissione').reduce((s,k)=>s+(+k.imp||0),0);
+    const totGenK=cosFilteredDash.reduce((s,k)=>s+(+k.imp||0),0);
     const subRowK=(label,val)=>`<tr style="background:var(--bg3);">
         <td></td>
         <td style="font-family:var(--mono);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">${label}</td>
