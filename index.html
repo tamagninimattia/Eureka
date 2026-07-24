@@ -668,7 +668,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
         <div style="display:grid;grid-template-columns:5fr 3fr 3fr 4fr 3fr 3fr;gap:10px;margin-bottom:10px;">
 
           <!-- 1. Net Liquidation Value — sempre verde, font più grande -->
-          <div id="hero-liq" class="metric-card" style="padding:18px 22px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);">
+          <div id="hero-liq" class="metric-card" onclick="showNLVInfo()" style="padding:18px 22px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);cursor:pointer;" title="Clicca per vedere come è calcolato questo dato">
             <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);"></div>
             <div style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--green);font-weight:700;margin-bottom:10px;">Net Liquidation Value</div>
             <div id="mkt-net-liq" style="font-family:var(--serif);font-size:42px;color:var(--green);line-height:1;letter-spacing:-0.03em;">—</div>
@@ -2494,6 +2494,50 @@ function showDurationInfo(){
   openInfoModal('Duration <em>— dettaglio calcolo</em>', 'Come viene costruito il dato con i filtri correnti', body);
 }
 
+function showNLVInfo(){
+  const d=window._nlvInfo;
+  if(!d){toast('Apri prima la Dashboard',true);return;}
+
+  const filtri=buildFiltriDesc();
+  const row=(label,val,note)=>`<div style="display:flex;justify-content:space-between;gap:16px;padding:5px 0;border-bottom:1px solid var(--border);">
+      <div>${label}${note?`<div style="font-size:10px;color:var(--text2);margin-top:2px;">${note}</div>`:''}</div>
+      <div style="white-space:nowrap;font-weight:600;color:var(--text);">${E(val)}</div>
+    </div>`;
+
+  const sezLatTax = d.inclTaxLat
+    ? row('− Imposte latenti stimate (26%)', d.totTaxLat, 'plus/minusvalenza non realizzata × 26%, calcolata sulle '+d.nPosConPrezzo+' posizioni con prezzo disponibile')
+    : `<div style="color:var(--text2);font-size:11px;padding:8px 0;">Imposte latenti — interruttore "Imposte latenti" <b style="color:var(--text);">disattivato</b>: non sottratte.</div>`;
+
+  const sezLatComm = d.inclCommLat
+    ? row('− Commissioni latenti stimate', d.totCommLat, 'commissione di vendita stimata, una volta per ciascuna delle '+d.nPosConPrezzo+' posizioni con prezzo disponibile')
+    : `<div style="color:var(--text2);font-size:11px;padding:8px 0;">Commissioni latenti — interruttore "Commissioni latenti" <b style="color:var(--text);">disattivato</b>: non sottratte.</div>`;
+
+  const warnPrezzi = d.nPosConPrezzo<d.nPosAperte
+    ? `<div style="margin-top:10px;font-size:10px;color:var(--gold2);">⚠ ${d.nPosAperte-d.nPosConPrezzo} posizione/i aperta/e nel filtro corrente non ha/hanno un prezzo di mercato disponibile: escluse dal calcolo del valore di mercato.</div>`
+    : '';
+
+  const body=`
+    <div style="margin-bottom:14px;padding:10px 12px;background:var(--bg3);border-radius:8px;font-size:11px;color:var(--text);">
+      <div style="opacity:0.7;margin-bottom:4px;">Filtri attivi sulla Dashboard</div>
+      ${filtri.join(' · ')}
+    </div>
+
+    <div style="margin-bottom:6px;color:var(--text2);font-size:11px;">Net Liquidation Value = valore di mercato delle posizioni aperte − imposte latenti − commissioni latenti (se attive)</div>
+    ${row('Valore di mercato (CTV)', d.totCtv, d.nPosConPrezzo+' di '+d.nPosAperte+' posizioni aperte nel filtro corrente hanno un prezzo disponibile')}
+    ${sezLatTax}
+    ${sezLatComm}
+    ${warnPrezzi}
+
+    <div style="margin-top:14px;padding:10px 12px;background:var(--rdim);border-radius:8px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text);">
+        <b>Totale mostrato in card</b><b>${d.anyPrice?E(d.totLiq):'—'}</b>
+      </div>
+      ${!d.anyPrice?'<div style="font-size:10px;color:var(--text2);margin-top:4px;">Nessuna posizione aperta nel filtro corrente ha un prezzo di mercato disponibile: il dato non può essere calcolato.</div>':''}
+    </div>`;
+
+  openInfoModal('Net Liquidation Value <em>— dettaglio calcolo</em>', 'Come viene costruito il dato con i filtri correnti', body);
+}
+
 function fg(id,label,type,val,step,placeholder,opts){
   if(opts){
     // select
@@ -3126,7 +3170,7 @@ function updDashKPI(){
   const minR   = getMinus();
 
   // Aggrega dai prezzi per posizione (rispettando toggle latenti)
-  let totCtv=0, totTaxLatRaw=0, totCommLatRaw=0, anyPrice=false;
+  let totCtv=0, totTaxLatRaw=0, totCommLatRaw=0, anyPrice=false, nPosConPrezzo=0;
   filteredISIN.forEach(key=>{
     const p=port[key];if(!p||p.qty<=0)return;
     const pp=portPrices[key]&&typeof portPrices[key]==='object'&&!Array.isArray(portPrices[key])
@@ -3134,6 +3178,7 @@ function updDashKPI(){
     const prez=pp.prez===''||pp.prez===null||pp.prez===undefined?null:+pp.prez;
     if(prez===null)return;
     anyPrice=true;
+    nPosConPrezzo++;
     const comm=getGlobalComm();
     const ctv=prez*p.qty;
     const pl=ctv-p.costoFiscale-comm;
@@ -3147,6 +3192,12 @@ function updDashKPI(){
   const totTaxLat  = inclTaxLat  ? totTaxLatRaw  : 0;
   const totCommLat = inclCommLat ? totCommLatRaw : 0;
   const totLiq = anyPrice ? totCtv - totTaxLat - totCommLat : 0;
+  const nPosAperte = filteredISIN.filter(k=>port[k]&&port[k].qty>0).length;
+  window._nlvInfo={
+    inclTaxLat, inclCommLat, anyPrice,
+    nPosAperte, nPosConPrezzo,
+    totCtv, totTaxLatRaw, totCommLatRaw, totTaxLat, totCommLat, totLiq
+  };
 
   // Popola solo i campi hidden (display rimossi dal pannello)
   const setHid=(hidId,val)=>{const h=document.getElementById(hidId);if(h)h.value=val;};
