@@ -696,14 +696,14 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
           </div>
 
           <!-- 5. Cedole & Div. netti — sempre verde -->
-          <div class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);">
+          <div id="card-cedole-tot" class="metric-card" onclick="showIncomeInfo()" style="padding:18px 16px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);cursor:pointer;" title="Clicca per vedere come è calcolato questo dato">
             <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);"></div>
             <div style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;color:var(--green);margin-bottom:10px;">Income &amp; Yield</div>
             <div id="m-cedole-tot" style="font-family:var(--serif);font-size:28px;color:var(--green);line-height:1;letter-spacing:-0.03em;">—</div>
           </div>
 
           <!-- 6. Realized P&L — dinamico -->
-          <div id="cell-pl-vendite" class="metric-card" style="padding:18px 16px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);transition:background 0.3s,border-color 0.3s;">
+          <div id="cell-pl-vendite" class="metric-card" onclick="showRealizedPLInfo()" style="padding:18px 16px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);transition:background 0.3s,border-color 0.3s;cursor:pointer;" title="Clicca per vedere come è calcolato questo dato">
             <div id="line-pl-vendite" style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);transition:background 0.3s;"></div>
             <div id="label-pl-vendite" style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;color:var(--green);margin-bottom:10px;transition:color 0.3s;">Realized P&amp;L</div>
             <div id="m-pl-vendite" style="font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-0.03em;color:var(--green);transition:color 0.3s;">—</div>
@@ -714,7 +714,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
         <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:10px;">
 
           <!-- 1. Duration -->
-          <div class="metric-card" style="padding:12px 16px;position:relative;overflow:hidden;">
+          <div id="card-duration" class="metric-card" onclick="showDurationInfo()" style="padding:12px 16px;position:relative;overflow:hidden;cursor:pointer;" title="Clicca per vedere come è calcolato questo dato">
             <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--blue),transparent);opacity:0.6;"></div>
             <div class="metric-label" style="color:var(--blue);">Duration</div>
             <div style="display:flex;align-items:baseline;gap:8px;margin-top:6px;flex-wrap:wrap;">
@@ -2393,6 +2393,107 @@ function showNetInfo(){
   openInfoModal('Net Return <em>— dettaglio calcolo</em>', 'Come viene costruito il dato con i filtri correnti', body);
 }
 
+function showIncomeInfo(){
+  const d=window._incomeInfo;
+  if(!d){toast('Apri prima la Dashboard',true);return;}
+
+  const filtri=buildFiltriDesc();
+  const row=(label,val,note)=>`<div style="display:flex;justify-content:space-between;gap:16px;padding:5px 0;border-bottom:1px solid var(--border);">
+      <div>${label}${note?`<div style="font-size:10px;color:var(--text2);margin-top:2px;">${note}</div>`:''}</div>
+      <div style="white-space:nowrap;font-weight:600;color:var(--text);">${E(val)}</div>
+    </div>`;
+
+  const body=`
+    <div style="margin-bottom:14px;padding:10px 12px;background:var(--bg3);border-radius:8px;font-size:11px;color:var(--text);">
+      <div style="opacity:0.7;margin-bottom:4px;">Filtri attivi sulla Dashboard</div>
+      ${filtri.join(' · ')}
+    </div>
+
+    <div style="margin-bottom:6px;color:var(--text2);font-size:11px;">Income &amp; Yield = totale lordo cedole/dividendi incassati − commissioni − tasse (in base agli interruttori attivi)</div>
+    ${row('Lordo cedole/dividendi', d.lordoTot, d.nCed+' cedole/dividendi confermati nel filtro corrente (le cedole "in attesa" non sono conteggiate)')}
+    ${row('− Commissioni', d.commAppliedTot, d.inclComm?'interruttore "Commissioni" attivo':'interruttore "Commissioni" disattivato → non sottratte')}
+    ${row('− Tasse (26%)', d.taxAppliedTot, d.inclTax?'interruttore "Imposte" attivo':'interruttore "Imposte" disattivato → non sottratte')}
+
+    <div style="margin-top:14px;padding:10px 12px;background:var(--rdim);border-radius:8px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text);">
+        <b>Totale mostrato in card</b><b>${E(d.totCedDisp)}</b>
+      </div>
+    </div>`;
+
+  openInfoModal('Income &amp; Yield <em>— dettaglio calcolo</em>', 'Come viene costruito il dato con i filtri correnti', body);
+}
+
+function showRealizedPLInfo(){
+  const d=window._rpInfo;
+  if(!d){toast('Apri prima la Dashboard',true);return;}
+
+  const filtri=buildFiltriDesc();
+  const row=(label,val,note)=>`<div style="display:flex;justify-content:space-between;gap:16px;padding:5px 0;border-bottom:1px solid var(--border);">
+      <div>${label}${note?`<div style="font-size:10px;color:var(--text2);margin-top:2px;">${note}</div>`:''}</div>
+      <div style="white-space:nowrap;font-weight:600;color:var(--text);">${E(val)}</div>
+    </div>`;
+
+  const body=`
+    <div style="margin-bottom:14px;padding:10px 12px;background:var(--bg3);border-radius:8px;font-size:11px;color:var(--text);">
+      <div style="opacity:0.7;margin-bottom:4px;">Filtri attivi sulla Dashboard</div>
+      ${filtri.join(' · ')}
+    </div>
+
+    <div style="margin-bottom:6px;color:var(--text2);font-size:11px;">Realized P&amp;L = P&amp;L CONTABILE (con Tobin) delle vendite − tasse realmente pagate (calcolate su base fiscale, senza Tobin)</div>
+    ${row('P&L contabile (con Tobin)', d.plContabileTot, d.nVen+' vendite nel filtro corrente · ricostruito replicando in ordine cronologico acquisti/vendite di ogni titolo, usando il PMC comprensivo di Tobin')}
+    ${row('− Tasse realmente pagate', d.taxTotRP, 'calcolate al momento della vendita sul P&L fiscale (senza Tobin), come da normativa')}
+    ${row('Nota: P&L fiscale (senza Tobin)', d.plFiscaleTot, 'quello effettivamente usato per il calcolo delle tasse e delle minusvalenze compensabili — diverge da quello contabile esattamente della Tobin pagata: '+E(d.diffTobin))}
+
+    <div style="margin-top:14px;padding:10px 12px;background:var(--rdim);border-radius:8px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text);">
+        <b>Totale mostrato in card</b><b>${E(d.plVenNetto)}</b>
+      </div>
+      <div style="font-size:10px;color:var(--text2);margin-top:4px;">
+        = P&L contabile − tasse realmente pagate
+      </div>
+    </div>`;
+
+  openInfoModal('Realized P&amp;L <em>— dettaglio calcolo</em>', 'Come viene costruito il dato con i filtri correnti', body);
+}
+
+function showDurationInfo(){
+  const d=window._durInfo;
+  if(!d){toast('Apri prima la Dashboard',true);return;}
+
+  const filtri=buildFiltriDesc();
+  const row=(label,val)=>`<div style="display:flex;justify-content:space-between;gap:16px;padding:5px 0;border-bottom:1px solid var(--border);">
+      <div>${label}</div>
+      <div style="white-space:nowrap;font-weight:600;color:var(--text);">${val}</div>
+    </div>`;
+
+  const body=`
+    <div style="margin-bottom:14px;padding:10px 12px;background:var(--bg3);border-radius:8px;font-size:11px;color:var(--text);">
+      <div style="opacity:0.7;margin-bottom:4px;">Filtri attivi sulla Dashboard</div>
+      ${filtri.join(' · ')}
+    </div>
+
+    <div style="margin-bottom:10px;color:var(--text2);font-size:11px;line-height:1.7;">
+      Durata media ponderata per capitale, con matching FIFO tra lotti d'acquisto e vendite:
+      <ul style="margin:8px 0 0;padding-left:18px;">
+        <li>la quota di un lotto d'acquisto <b style="color:var(--text);">venduta</b> pesa per (data vendita − data acquisto)</li>
+        <li>la quota <b style="color:var(--text);">ancora in portafoglio</b> pesa per (oggi − data acquisto)</li>
+      </ul>
+      Ogni titolo viene consumato in ordine cronologico (i lotti più vecchi vengono "venduti" per primi), così ogni movimento di vendita è correttamente riflesso nel calcolo, senza contare due volte lo stesso capitale.
+    </div>
+    ${row('Titoli coinvolti nel filtro corrente', d.nTitoli)}
+    ${row('Acquisti considerati', d.nAcq)}
+    ${row('Vendite considerate', d.nVen)}
+
+    <div style="margin-top:14px;padding:10px 12px;background:var(--rdim);border-radius:8px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text);">
+        <b>Totale mostrato in card</b><b>${d.durTesto}</b>
+      </div>
+      ${(d.dur===null||isNaN(d.dur))?'<div style="font-size:10px;color:var(--text2);margin-top:4px;">Nessun movimento disponibile nel filtro corrente per calcolare una durata.</div>':''}
+    </div>`;
+
+  openInfoModal('Duration <em>— dettaglio calcolo</em>', 'Come viene costruito il dato con i filtri correnti', body);
+}
+
 function fg(id,label,type,val,step,placeholder,opts){
   if(opts){
     // select
@@ -2870,6 +2971,12 @@ function updMetrics(){
       }
     }
   }
+  // Cache per il popup esplicativo
+  window._durInfo={
+    dur, durTesto: mDur?mDur.textContent:'—',
+    nAcq:fAcq.length, nVen:fVen.length,
+    nTitoli:new Set([...fAcq.map(a=>a.isin||a.titolo), ...fVen.map(v=>v.isin||v.titolo)]).size
+  };
 
   // 2. XIRR
   const flows=buildFlows(fAcq,fVen,fCed,fCos,inclComm,inclTax,mktVal,inclTaxLat,taxLat,inclCommLat,commLat);
@@ -3117,24 +3224,36 @@ function updDashKPI(){
   // (le tasse restano calcolate su base fiscale, cioè senza Tobin, come da normativa)
   const filteredVenAll=ven.filter(v=>filterKey(v.isin||v.titolo));
   const plContabileMap=calcPLContabilePerVendita();
+  let plContabileTot=0, plFiscaleTot=0, taxTotRP=0;
   const plVenNetto=filteredVenAll.reduce((s,v)=>{
     const plC = plContabileMap.has(v.id) ? plContabileMap.get(v.id) : (v.pl||0);
+    plContabileTot+=plC; plFiscaleTot+=(v.pl||0); taxTotRP+=(v.tax||0);
     return s + (plC - (v.tax||0));
   },0);
   const plVenEl=document.getElementById('m-pl-vendite');
   if(plVenEl) plVenEl.textContent=E(plVenNetto);
   setHeroCell('cell-pl-vendite','label-pl-vendite','m-pl-vendite',plVenNetto,true);
+  window._rpInfo={
+    nVen:filteredVenAll.length, plContabileTot, plFiscaleTot, taxTotRP, plVenNetto,
+    diffTobin: plFiscaleTot-plContabileTot
+  };
 
   // Cedole totali → metric cell
   const filteredCedAll=ced.filter(c=>filterKey(c.isin||c.titolo)&&!c.provvisoria);
+  let lordoTot=0, commAppliedTot=0, taxAppliedTot=0;
   const totCedDisp=filteredCedAll.reduce((s,c)=>{
     const lordo=+c.lordo||0;
     const comm=inclComm?(+c.comm||0):0;
     const tax=inclTax?(+c.tax||0):0;
+    lordoTot+=lordo; commAppliedTot+=comm; taxAppliedTot+=tax;
     return s+(lordo-comm-tax);
   },0);
   const cedEl=document.getElementById('m-cedole-tot');
   if(cedEl){cedEl.textContent=E(totCedDisp);cedEl.style.color=totCedDisp>=0?'var(--green)':'var(--red)';}
+  window._incomeInfo={
+    inclComm, inclTax, nCed:filteredCedAll.length,
+    lordoTot, commAppliedTot, taxAppliedTot, totCedDisp
+  };
 
   const nlEl = document.getElementById('mkt-net-liq');
   if(nlEl){
