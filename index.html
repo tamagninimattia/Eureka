@@ -689,7 +689,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
           </div>
 
           <!-- 4. Net Return — dinamico -->
-          <div id="cell-risultato" class="metric-card" style="padding:18px 18px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);transition:background 0.3s,border-color 0.3s;">
+          <div id="cell-risultato" class="metric-card" onclick="showNetInfo()" style="padding:18px 18px;position:relative;overflow:hidden;background:rgba(52,201,126,0.06);border-color:rgba(52,201,126,0.2);transition:background 0.3s,border-color 0.3s;cursor:pointer;" title="Clicca per vedere come è calcolato questo dato">
             <div id="line-risultato" style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);transition:background 0.3s;"></div>
             <div id="label-risultato" style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;margin-bottom:10px;color:var(--green);transition:color 0.3s;">Net Return</div>
             <div id="m-risultato-netto" style="font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-0.03em;color:var(--green);transition:color 0.3s;">—</div>
@@ -738,7 +738,7 @@ tr.drag-over{border-top:2px solid var(--gold)!important;}
           </div>
 
           <!-- 5. Imposte (tog-tax + tog-tax-lat) -->
-          <div class="metric-card" style="padding:12px 16px;position:relative;overflow:hidden;">
+          <div class="metric-card" id="card-tax-tot" onclick="showTaxInfo()" style="padding:12px 16px;position:relative;overflow:hidden;cursor:pointer;" title="Clicca per vedere come è calcolato questo dato">
             <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--red),transparent);opacity:0.35;"></div>
             <div class="metric-label" style="color:var(--red);">Imposte</div>
             <div id="m-tax-tot" style="font-family:var(--serif);font-size:20px;color:var(--red);line-height:1;letter-spacing:-0.01em;margin-top:6px;">—</div>
@@ -1893,6 +1893,22 @@ function rendAcq(){
       <button class="btn-del" onclick="delAcq(${a.id})">✕</button>
     </td>
   </tr>`).join('');
+
+  // Riga totale (solo Tobin, Commissioni e Totale — sul set attualmente filtrato)
+  const totTobin = dati.reduce((s,a)=>s+(+a.tobin||0),0);
+  const totComm  = dati.reduce((s,a)=>s+(+a.comm||0),0);
+  const totTot   = dati.reduce((s,a)=>s+(+a.prezzo*+a.qty+(+a.tobin||0)+(+a.comm||0)),0);
+  const totRow=document.createElement('tr');
+  totRow.style.cssText='background:var(--bg3);border-top:2px solid var(--border2);';
+  totRow.innerHTML=`
+    <td></td>
+    <td style="font-family:var(--mono);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">Totale</td>
+    <td></td><td></td><td></td><td></td><td></td><td></td>
+    <td class="neg" style="font-weight:600;">${E(totTobin)}</td>
+    <td class="neg" style="font-weight:600;">${E(totComm)}</td>
+    <td class="gold" style="font-weight:700;">${E(totTot)}</td>
+    <td></td>`;
+  tb.appendChild(totRow);
 }
 function delAcq(id){if(!confirm('Eliminare questo acquisto?'))return;const r=acq.find(a=>a.id===id);acq=acq.filter(a=>a.id!==id);save();rendAcq();rendCed();toast('Eliminato');if(r)cDelete('acquisti',id,r.sb_id);}
 
@@ -2034,6 +2050,24 @@ function rendCed(){
       </td>
     </tr>`;
   }).join('');
+
+  // Riga totale (solo Lordo, Commissioni, Tasse e Netto)
+  const totLordo = ced.reduce((s,c)=>s+(getCedDisplay(c).lordo||0),0);
+  const totComm  = ced.reduce((s,c)=>s+(+c.comm||0),0);
+  const totTax   = ced.reduce((s,c)=>s+(getCedDisplay(c).tax||0),0);
+  const totNetto = ced.reduce((s,c)=>s+(getCedDisplay(c).netto||0),0);
+  const totRow=document.createElement('tr');
+  totRow.style.cssText='background:var(--bg3);border-top:2px solid var(--border2);';
+  totRow.innerHTML=`
+    <td></td>
+    <td style="font-family:var(--mono);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">Totale</td>
+    <td></td><td></td><td></td>
+    <td style="font-weight:600;">${E(totLordo)}</td>
+    <td class="neg" style="font-weight:600;">${E(totComm)}</td>
+    <td class="neg" style="font-weight:600;">${E(totTax)}</td>
+    <td class="pos" style="font-weight:700;">${E(totNetto)}</td>
+    <td></td>`;
+  tb.appendChild(totRow);
 }
 
 function confermaProvvisoria(id){
@@ -2177,6 +2211,25 @@ function rendVen(){
       <button class="btn-del" onclick="delVen(${v.id})">✕</button>
     </td>
   </tr>`).join('');
+
+  // Riga totale (solo Commissioni, P&L lordo, Tasse e Netto)
+  const totComm = dati.reduce((s,v)=>s+(+v.comm||0),0);
+  const totPl   = dati.reduce((s,v)=>s+(+v.pl||0),0);
+  const totTax  = dati.reduce((s,v)=>s+(+v.tax||0),0);
+  const totNet  = dati.reduce((s,v)=>s+(+v.net||0),0);
+  const totRow=document.createElement('tr');
+  totRow.style.cssText='background:var(--bg3);border-top:2px solid var(--border2);';
+  totRow.innerHTML=`
+    <td></td>
+    <td style="font-family:var(--mono);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">Totale</td>
+    <td></td><td></td>
+    <td class="neg" style="font-weight:600;">${E(totComm)}</td>
+    <td></td>
+    <td class="${totPl>=0?'pos':'neg'}" style="font-weight:600;">${E(totPl)}</td>
+    <td class="neg" style="font-weight:600;">${E(totTax)}</td>
+    <td class="${totNet>=0?'pos':'neg'}" style="font-weight:700;">${E(totNet)}</td>
+    <td></td>`;
+  tb.appendChild(totRow);
 }
 function delVen(id){if(!confirm("Eliminare?"))return;const r=ven.find(v=>v.id===id);ven=ven.filter(v=>v.id!==id);save();rendVen();rendCed();updMinus();updDash();toast("Eliminata");if(r)cDelete("vendite",id,r.sb_id);}
 
@@ -2195,11 +2248,7 @@ function openInfoModal(title,sub,bodyHtml){
 function closeInfoModal(){document.getElementById('infomodal').classList.remove('show');}
 document.addEventListener('click',e=>{if(e.target.id==='infomodal')closeInfoModal();});
 
-function showCommInfo(){
-  const d=window._commInfo;
-  if(!d){toast('Apri prima la Dashboard',true);return;}
-
-  // Descrizione filtri attivi (stessi usati da filterKey su tutta la dashboard)
+function buildFiltriDesc(){
   const filtri=[];
   filtri.push('Tipo: <b>'+(fType==='all'?'Tutti':fType)+'</b>');
   filtri.push('Settore: <b>'+(fSector==='all'?'Tutti':fSector)+'</b>');
@@ -2211,6 +2260,13 @@ function showCommInfo(){
     const dd=dos.find(x=>String(x.id)===String(fDossier));
     filtri.push('Dossier: <b>'+(dd?dd.nome:fDossier)+'</b>');
   } else filtri.push('Dossier: <b>Tutti</b>');
+  return filtri;
+}
+function showCommInfo(){
+  const d=window._commInfo;
+  if(!d){toast('Apri prima la Dashboard',true);return;}
+
+  const filtri=buildFiltriDesc();
 
   const row=(label,val,note)=>`<div style="display:flex;justify-content:space-between;gap:16px;padding:5px 0;border-bottom:1px solid var(--border);">
       <div>${label}${note?`<div style="font-size:10px;color:var(--text2);margin-top:2px;">${note}</div>`:''}</div>
@@ -2250,6 +2306,91 @@ function showCommInfo(){
     </div>`;
 
   openInfoModal('Commissioni <em>— dettaglio calcolo</em>', 'Come viene costruito il dato con i filtri correnti', body);
+}
+
+function showTaxInfo(){
+  const d=window._taxInfo;
+  if(!d){toast('Apri prima la Dashboard',true);return;}
+
+  const filtri=buildFiltriDesc();
+
+  const row=(label,val,note)=>`<div style="display:flex;justify-content:space-between;gap:16px;padding:5px 0;border-bottom:1px solid var(--border);">
+      <div>${label}${note?`<div style="font-size:10px;color:var(--text2);margin-top:2px;">${note}</div>`:''}</div>
+      <div style="white-space:nowrap;font-weight:600;color:var(--text);">${E(val)}</div>
+    </div>`;
+
+  const sezRealizzate = d.inclTax
+    ? `<div style="margin-bottom:6px;color:var(--text2);font-size:11px;">Imposte REALIZZATE (movimenti già registrati) — attive: <b style="color:var(--text);">sì</b> <span style="opacity:0.7;">(interruttore "Imposte")</span></div>
+       ${row('Tobin tax sugli acquisti', d.tobinFilt, d.nAcq+' acquisti nel filtro corrente')}
+       ${row('Tasse su cedole/dividendi', d.taxCedFilt, d.nCed+' cedole nel filtro corrente')}
+       ${row('Tasse sulle vendite (26%)', d.taxVenFilt, d.nVen+' vendite nel filtro corrente')}
+       ${row('Costi di mantenimento tipo "imposta"', d.cosImp, 'NON filtrati per titolo/settore/dossier: sono costi di conto, non legati a un singolo titolo')}
+       ${row('= Totale realizzate', d.totTaxReal)}`
+    : `<div style="color:var(--text2);font-size:11px;padding:8px 0;">Imposte REALIZZATE — interruttore "Imposte" <b style="color:var(--text);">disattivato</b>: non vengono calcolate né incluse nel totale.</div>`;
+
+  const sezLatenti = d.inclTaxLat
+    ? `<div style="margin:14px 0 6px;color:var(--text2);font-size:11px;">Imposte LATENTI (stima su posizioni ancora aperte) — attive: <b style="color:var(--text);">sì</b> <span style="opacity:0.7;">(interruttore "Imposte latenti")</span></div>
+       ${row('Plusvalenza/minusvalenza non realizzata × 26%', d.totTaxLatRaw, 'calcolata sulle '+d.nPosApert+' posizioni ancora aperte nel filtro corrente, usando il PMC fiscale (senza Tobin) e il prezzo di mercato corrente')}
+       ${row('= Totale latenti', d.totTaxLatRaw)}`
+    : `<div style="margin-top:14px;color:var(--text2);font-size:11px;padding:8px 0;">Imposte LATENTI — interruttore "Imposte latenti" <b style="color:var(--text);">disattivato</b>: non vengono calcolate né incluse nel totale.</div>`;
+
+  const body=`
+    <div style="margin-bottom:14px;padding:10px 12px;background:var(--bg3);border-radius:8px;font-size:11px;color:var(--text);">
+      <div style="opacity:0.7;margin-bottom:4px;">Filtri attivi sulla Dashboard</div>
+      ${filtri.join(' · ')}
+    </div>
+
+    ${sezRealizzate}
+    ${sezLatenti}
+
+    <div style="margin-top:14px;padding:10px 12px;background:var(--rdim);border-radius:8px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text);">
+        <b>Totale mostrato in card</b><b>${E(d.totTaxTot)}</b>
+      </div>
+      <div style="font-size:10px;color:var(--text2);margin-top:4px;">
+        = ${d.inclTax?'Totale realizzate':'0 (interruttore disattivato)'} + ${d.inclTaxLat?'Totale latenti':'0 (interruttore disattivato)'}
+      </div>
+    </div>`;
+
+  openInfoModal('Imposte <em>— dettaglio calcolo</em>', 'Come viene costruito il dato con i filtri correnti', body);
+}
+
+function showNetInfo(){
+  const d=window._netInfo;
+  if(!d){toast('Apri prima la Dashboard',true);return;}
+
+  const filtri=buildFiltriDesc();
+
+  const row=(label,val,note)=>`<div style="display:flex;justify-content:space-between;gap:16px;padding:5px 0;border-bottom:1px solid var(--border);">
+      <div>${label}${note?`<div style="font-size:10px;color:var(--text2);margin-top:2px;">${note}</div>`:''}</div>
+      <div style="white-space:nowrap;font-weight:600;color:var(--text);">${E(val)}</div>
+    </div>`;
+
+  const costiNote = d.inclCostiGlobali
+    ? 'Sottratti per intero (nessun filtro Tipo/Settore attivo, quindi sono attribuibili a tutto il portafoglio)'
+    : 'NON sottratti: con un filtro Tipo o Settore attivo non è possibile attribuire proporzionalmente i costi di conto (commissioni/imposte/altro non legati a un titolo specifico) al sottoinsieme filtrato';
+
+  const body=`
+    <div style="margin-bottom:14px;padding:10px 12px;background:var(--bg3);border-radius:8px;font-size:11px;color:var(--text);">
+      <div style="opacity:0.7;margin-bottom:4px;">Filtri attivi sulla Dashboard</div>
+      ${filtri.join(' · ')}
+    </div>
+
+    <div style="margin-bottom:6px;color:var(--text2);font-size:11px;">Net Return = flussi in entrata − capitale storicamente investito − costi di conto (se attribuibili)</div>
+    ${row('+ Cedole/dividendi netti', d.totCed, d.nCed+' cedole nel filtro corrente · comm./tasse escluse in base agli interruttori "Commissioni"/"Imposte"')}
+    ${row('+ Vendite nette', d.totVen, d.nVen+' vendite nel filtro corrente · comm./tasse escluse in base agli interruttori "Commissioni"/"Imposte"')}
+    ${row('+ Valore di liquidazione posizioni aperte', d.totLiq, d.anyPrice?'valore di mercato corrente, al netto di imposte e commissioni latenti se i relativi interruttori sono attivi':'⚠ nessun prezzo di mercato disponibile: il totale non può essere calcolato')}
+    ${row('− Capitale storicamente investito', d.totInvStorico, d.nAcq+' acquisti mai effettuati (anche quelli poi venduti) · include Tobin/commissioni in base agli interruttori')}
+    ${row('− Costi di mantenimento', d.inclCostiGlobali?d.totCos:0, costiNote+(d.inclCostiGlobali?` (di cui commissioni ${E(d.cosComm)}, imposte ${E(d.cosImp)}, altro ${E(d.cosAltro)})`:''))}
+
+    <div style="margin-top:14px;padding:10px 12px;background:var(--bg3);border-radius:8px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text);">
+        <b>Totale mostrato in card</b><b>${d.anyPrice?E(d.risNetto):'—'}</b>
+      </div>
+      ${!d.anyPrice?'<div style="font-size:10px;color:var(--text2);margin-top:4px;">Nessun prezzo di mercato disponibile per le posizioni aperte nel filtro corrente: il dato non può essere calcolato.</div>':''}
+    </div>`;
+
+  openInfoModal('Net Return <em>— dettaglio calcolo</em>', 'Come viene costruito il dato con i filtri correnti', body);
 }
 
 function fg(id,label,type,val,step,placeholder,opts){
@@ -2503,6 +2644,29 @@ function rendCos(){
       <button class="btn-del" onclick="delCos(${k.id})">✕</button>
     </td>
   </tr>`).join('');
+
+  // Subtotali per tipo (Imposte, Commissioni) + Gran totale (tutti i tipi, incl. "altro")
+  const totImposta   = cos.filter(k=>k.tipo==='imposta').reduce((s,k)=>s+(+k.imp||0),0);
+  const totComm      = cos.filter(k=>k.tipo==='commissione').reduce((s,k)=>s+(+k.imp||0),0);
+  const totGenerale  = cos.reduce((s,k)=>s+(+k.imp||0),0);
+
+  const subRow=(label,val)=>`<tr style="background:var(--bg3);">
+      <td></td>
+      <td colspan="2" style="font-family:var(--mono);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">${label}</td>
+      <td class="neg" style="font-weight:600;">${E(val)}</td>
+      <td></td>
+    </tr>`;
+
+  tb.innerHTML += subRow('Totale imposte', totImposta) + subRow('Totale commissioni', totComm);
+
+  const totRow=document.createElement('tr');
+  totRow.style.cssText='background:var(--bg3);border-top:2px solid var(--border2);';
+  totRow.innerHTML=`
+    <td></td>
+    <td colspan="2" style="font-family:var(--mono);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">Totale generale</td>
+    <td class="neg" style="font-weight:700;">${E(totGenerale)}</td>
+    <td></td>`;
+  tb.appendChild(totRow);
 }
 
 function editCos(id){
@@ -2931,6 +3095,14 @@ function updDashKPI(){
     taxEl.style.color=hasSomething?'var(--red)':'var(--text3)';
     taxEl.style.opacity=hasSomething?'1':'0.4';
   }
+  // Cache per il popup esplicativo, cosi mostriamo sempre esattamente i numeri della card
+  window._taxInfo={
+    inclTax, inclTaxLat,
+    nAcq:filteredAcq.length, nCed:filteredCed.length, nVen:filteredVen.length,
+    nPosApert:filteredISIN.filter(k=>port[k]&&port[k].qty>0).length,
+    tobinFilt, taxCedFilt, taxVenFilt, cosImp, totTaxReal,
+    totTaxLatRaw, totTaxLat2, totTaxTot
+  };
 
   // Minusvalenze compensabili residue (zainetto fiscale) — dato di posizione fiscale
   // complessiva, non filtrato per tipo/settore/titolo/dossier
@@ -2984,6 +3156,14 @@ function updDashKPI(){
     rnEl.textContent = anyPrice ? E(risNetto) : '—';
   }
   setHeroCell('cell-risultato','label-risultato','m-risultato-netto',risNetto,anyPrice);
+
+  // Cache per il popup esplicativo, cosi mostriamo sempre esattamente i numeri della card
+  window._netInfo={
+    inclComm, inclTax, inclCommLat, inclTaxLat, inclCostiGlobali, anyPrice,
+    nAcq:filteredAcq.length, nVen:filteredVen.length, nCed:filteredCed.length,
+    totCed, totVen, totLiq, totInvStorico, totCos, cosComm, cosImp, cosAltro,
+    risNetto
+  };
 
   // Aggiorna metriche XIRR e torta
   updMetrics();
